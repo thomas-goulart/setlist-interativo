@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastro de Repertório - Show ao Vivo</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #121212; color: #fff; margin: 0; padding: 20px; }
+        h1, h2 { color: #1db954; text-align: center; }
+        .container { max-width: 900px; margin: 0 auto; position: relative; }
+        
+        .topo-painel { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 10px; }
+        .link-painel { font-size: 0.85rem; color: #aaa; text-decoration: none; }
+        .link-painel:hover { color: #1db954; text-decoration: underline; }
+
+        /* TELA DE LOGIN */
+        #tela-login { display: flex; justify-content: center; align-items: center; min-height: 80vh; }
+        .login-card { background: #1e1e1e; padding: 30px; border-radius: 8px; border: 1px solid #333; width: 100%; max-width: 400px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        .login-grupo { margin-bottom: 15px; }
+        .login-grupo label { display: block; margin-bottom: 5px; color: #aaa; font-size: 0.9rem; }
+        .login-grupo input { width: 100%; padding: 12px; background: #2a2a2a; color: #fff; border: 1px solid #444; border-radius: 6px; box-sizing: border-box; outline: none; }
+        .login-grupo input:focus { border-color: #1db954; }
+        .btn-entrar { background: #1db954; color: #000; width: 100%; padding: 12px; font-weight: bold; border-radius: 6px; border: none; cursor: pointer; font-size: 1rem; margin-top: 10px; }
+        .btn-entrar:hover { background: #1ed760; }
+        #erro-login { color: #e74c3c; font-size: 0.85rem; text-align: center; margin-top: 10px; display: none; }
+
+        /* CONTEÚDO PROTEGIDO */
+        #conteudo-protegido { display: none; }
+
+        .secao-bloco { background: #1e1e1e; padding: 20px; border-radius: 8px; margin-bottom: 25px; border: 1px solid #333; }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .form-grupo { margin-bottom: 15px; }
+        .form-grupo.full { grid-column: span 2; }
+        .form-grupo label { display: block; margin-bottom: 5px; color: #aaa; }
+        .form-grupo input, .form-grupo select { width: 100%; padding: 10px; background: #2a2a2a; color: #fff; border: 1px solid #444; border-radius: 5px; box-sizing: border-box; outline: none; }
+        .form-grupo input:focus, .form-grupo select:focus { border-color: #1db954; }
+        
+        .btn-acao { background: #1db954; color: #000; padding: 10px 20px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; }
+        .btn-acao:hover { background: #1ed760; }
+        .btn-cancelar { background: #555; color: #fff; padding: 10px 20px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; display: none; margin-left: 10px; }
+        .btn-cancelar:hover { background: #666; }
+
+        .musica-card { background: #2a2a2a; padding: 12px 15px; margin-bottom: 8px; border-radius: 5px; display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .musica-info { flex: 1; }
+        .acoes-grupo { display: flex; gap: 6px; }
+        
+        .btn-editar { background: #f39c12; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; font-weight: bold; }
+        .btn-editar:hover { background: #d68910; }
+        .btn-excluir { background: #c0392b; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; font-weight: bold; }
+        .btn-excluir:hover { background: #e74c3c; }
+
+        .tag { display: inline-block; background: #333; color: #1db954; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; margin-right: 5px; }
+
+        .btn-sair { background: #333; color: #ff5555; border: 1px solid #444; padding: 6px 14px; font-size: 0.8rem; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .btn-sair:hover { background: #444; border-color: #ff5555; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- TELA DE LOGIN -->
+        <div id="tela-login">
+            <div class="login-card">
+                <h1>Cadastro de Repertório</h1>
+                <p style="text-align: center; color: #888; font-size: 0.9rem; margin-bottom: 20px;">Faça login para gerenciar o repertório</p>
+                <div class="login-grupo">
+                    <label for="usuario-input">Usuário</label>
+                    <input type="text" id="usuario-input" placeholder="Digite seu usuário">
+                </div>
+                <div class="login-grupo">
+                    <label for="senha-input">Senha</label>
+                    <input type="password" id="senha-input" placeholder="Digite sua senha">
+                </div>
+                <button class="btn-entrar" onclick="fazerLogin()">Entrar</button>
+                <div id="erro-login">Usuário ou senha incorretos.</div>
+            </div>
+        </div>
+
+        <!-- CONTEÚDO PROTEGIDO -->
+        <div id="conteudo-protegido">
+            <div class="topo-painel">
+                <a href="fila.html" class="link-painel">⬅ Voltar para o Painel da Fila</a>
+                <button class="btn-sair" onclick="sair()">Sair / Logout</button>
+            </div>
+
+            <h1>Gerenciamento de Repertório</h1>
+
+            <div class="secao-bloco">
+                <h2 id="titulo-form-modo">Adicionar Nova Música</h2>
+                <input type="hidden" id="edit-id" value="">
+                
+                <div class="form-grid">
+                    <div class="form-grupo">
+                        <label for="input-titulo">Título da Música</label>
+                        <input type="text" id="input-titulo" placeholder="Ex: Back In Black">
+                    </div>
+                    <div class="form-grupo">
+                        <label for="input-artista">Artista / Banda</label>
+                        <input type="text" id="input-artista" placeholder="Ex: AC/DC">
+                    </div>
+                    <div class="form-grupo">
+                        <label for="input-genero">Gênero / Estilo</label>
+                        <input type="text" id="input-genero" placeholder="Ex: Rock, Pop, Sertanejo">
+                    </div>
+                    <div class="form-grupo">
+                        <label for="input-origem">Origem</label>
+                        <select id="input-origem">
+                            <option value="Nacional">Nacional</option>
+                            <option value="Internacional">Internacional</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 10px;">
+                    <button class="btn-acao" id="btn-salvar-musica" onclick="salvarMusica()">Cadastrar Música</button>
+                    <button class="btn-cancelar" id="btn-cancelar-edicao" onclick="cancelarEdicao()">Cancelar Edição</button>
+                </div>
+            </div>
+
+            <div class="secao-bloco">
+                <h2>Repertório Cadastrado</h2>
+                <div id="lista-repertorio">Carregando repertório...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API = "http://localhost:3000/api";
+
+        window.onload = function() {
+            const tokenSalvo = localStorage.getItem('token_admin');
+            if (tokenSalvo) {
+                verificarTokenAutomatico(tokenSalvo);
+            }
+        };
+
+        function getAuthHeader() {
+            const token = localStorage.getItem('token_admin');
+            return {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            };
+        }
+
+        async function fazerLogin() {
+            const usuario = document.getElementById('usuario-input').value;
+            const senha = document.getElementById('senha-input').value;
+            const erroDiv = document.getElementById('erro-login');
+
+            const str = `${usuario}:${senha}`;
+            const utf8Bytes = new TextEncoder().encode(str);
+            let binary = '';
+            utf8Bytes.forEach(b => binary += String.fromCharCode(b));
+            const token = btoa(binary);
+
+            try {
+                const res = await fetch(`${API}/login`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (res.ok) {
+                    localStorage.setItem('token_admin', token);
+                    document.getElementById('tela-login').style.display = 'none';
+                    document.getElementById('conteudo-protegido').style.display = 'block';
+                    carregarRepertorio();
+                } else {
+                    erroDiv.style.display = 'block';
+                }
+            } catch (e) {
+                erroDiv.textContent = 'Erro de conexão com o servidor.';
+                erroDiv.style.display = 'block';
+            }
+        }
+
+        async function verificarTokenAutomatico(token) {
+            try {
+                const res = await fetch(`${API}/login`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (res.ok) {
+                    document.getElementById('tela-login').style.display = 'none';
+                    document.getElementById('conteudo-protegido').style.display = 'block';
+                    carregarRepertorio();
+                } else {
+                    localStorage.removeItem('token_admin');
+                }
+            } catch (e) {
+                // Servidor offline
+            }
+        }
+
+        function sair() {
+            localStorage.removeItem('token_admin');
+            document.getElementById('conteudo-protegido').style.display = 'none';
+            document.getElementById('tela-login').style.display = 'flex';
+            document.getElementById('usuario-input').value = '';
+            document.getElementById('senha-input').value = '';
+        }
+
+        async function carregarRepertorio() {
+            try {
+                const res = await fetch(`${API}/repertorio`);
+                const repertorio = await res.json();
+                const container = document.getElementById('lista-repertorio');
+                container.innerHTML = '';
+
+                if (repertorio.length === 0) {
+                    container.innerHTML = '<p style="color:#777; text-align:center;">Nenhuma música cadastrada ainda.</p>';
+                    return;
+                }
+
+                repertorio.forEach(m => {
+                    const div = document.createElement('div');
+                    div.className = 'musica-card';
+                    div.innerHTML = `
+                        <div class="musica-info">
+                            <div><strong>${m.titulo}</strong> - <span style="color:#aaa;">${m.artista}</span></div>
+                            <div style="margin-top: 5px;">
+                                <span class="tag">${m.genero || 'Geral'}</span>
+                                <span class="tag">${m.origem || 'Nacional'}</span>
+                            </div>
+                        </div>
+                        <div class="acoes-grupo">
+                            <button class="btn-editar" onclick='prepararEdicao(${JSON.stringify(m)})'>Editar</button>
+                            <button class="btn-excluir" onclick="excluirMusica('${m.id}')">Excluir</button>
+                        </div>
+                    `;
+                    container.appendChild(div);
+                });
+            } catch (e) {
+                console.error("Erro ao carregar repertório", e);
+            }
+        }
+
+        async function salvarMusica() {
+            const id = document.getElementById('edit-id').value;
+            const titulo = document.getElementById('input-titulo').value.trim();
+            const artista = document.getElementById('input-artista').value.trim();
+            const genero = document.getElementById('input-genero').value.trim();
+            const origem = document.getElementById('input-origem').value;
+
+            if (!titulo || !artista) {
+                alert('Preencha o título e o artista.');
+                return;
+            }
+
+            const dadosMusica = { titulo, artista, genero, origem };
+            const url = id ? `${API}/repertorio/${id}` : `${API}/repertorio`;
+            const metodo = id ? 'PUT' : 'POST';
+
+            try {
+                const res = await fetch(url, {
+                    method: metodo,
+                    headers: getAuthHeader(),
+                    body: JSON.stringify(dadosMusica)
+                });
+
+                if (res.ok) {
+                    limparFormulario();
+                    carregarRepertorio();
+                } else {
+                    alert('Erro ao salvar música.');
+                }
+            } catch (e) {
+                alert('Erro de conexão com o servidor.');
+            }
+        }
+
+        function prepararEdicao(musica) {
+            document.getElementById('edit-id').value = musica.id;
+            document.getElementById('input-titulo').value = musica.titulo;
+            document.getElementById('input-artista').value = musica.artista;
+            document.getElementById('input-genero').value = musica.genero || '';
+            document.getElementById('input-origem').value = musica.origem || 'Nacional';
+
+            document.getElementById('titulo-form-modo').textContent = 'Editar Música';
+            document.getElementById('btn-salvar-musica').textContent = 'Salvar Alterações';
+            document.getElementById('btn-cancelar-edicao').style.display = 'inline-block';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function cancelarEdicao() {
+            limparFormulario();
+        }
+
+        function limparFormulario() {
+            document.getElementById('edit-id').value = '';
+            document.getElementById('input-titulo').value = '';
+            document.getElementById('input-artista').value = '';
+            document.getElementById('input-genero').value = '';
+            document.getElementById('input-origem').value = 'Nacional';
+
+            document.getElementById('titulo-form-modo').textContent = 'Adicionar Nova Música';
+            document.getElementById('btn-salvar-musica').textContent = 'Cadastrar Música';
+            document.getElementById('btn-cancelar-edicao').style.display = 'none';
+        }
+
+        async function excluirMusica(id) {
+            if (!confirm('Deseja realmente excluir esta música?')) return;
+            try {
+                const res = await fetch(`${API}/repertorio/${id}`, {
+                    method: 'DELETE',
+                    headers: getAuthHeader()
+                });
+
+                if (res.ok) {
+                    carregarRepertorio();
+                } else {
+                    alert('Erro ao excluir música.');
+                }
+            } catch (e) {
+                alert('Erro de conexão com o servidor.');
+            }
+        }
+    </script>
+</body>
+</html>

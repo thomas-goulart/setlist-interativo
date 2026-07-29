@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciamento da Fila - Show ao Vivo</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #121212; color: #fff; margin: 0; padding: 20px; }
+        h1, h2 { color: #1db954; text-align: center; }
+        .container { max-width: 800px; margin: 0 auto; position: relative; }
+        
+        .topo-painel { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 10px; }
+        .link-cadastro { font-size: 0.85rem; color: #aaa; text-decoration: none; }
+        .link-cadastro:hover { color: #1db954; text-decoration: underline; }
+
+        #tela-login { display: flex; justify-content: center; align-items: center; min-height: 80vh; }
+        .login-card { background: #1e1e1e; padding: 30px; border-radius: 8px; border: 1px solid #333; width: 100%; max-width: 400px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        .login-grupo { margin-bottom: 15px; }
+        .login-grupo label { display: block; margin-bottom: 5px; color: #aaa; font-size: 0.9rem; }
+        .login-grupo input { width: 100%; padding: 12px; background: #2a2a2a; color: #fff; border: 1px solid #444; border-radius: 6px; box-sizing: border-box; outline: none; }
+        .login-grupo input:focus { border-color: #1db954; }
+        .btn-entrar { background: #1db954; color: #000; width: 100%; padding: 12px; font-weight: bold; border-radius: 6px; border: none; cursor: pointer; font-size: 1rem; margin-top: 10px; }
+        .btn-entrar:hover { background: #1ed760; }
+        #erro-login { color: #e74c3c; font-size: 0.85rem; text-align: center; margin-top: 10px; display: none; }
+
+        #painel-admin { display: none; }
+
+        .abas { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+        .btn-aba { background: #222; color: #aaa; border: 1px solid #333; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .btn-aba.ativo { background: #1db954; color: #000; border-color: #1db954; }
+
+        .secao { display: none; }
+        .secao.ativo { display: block; }
+
+        .secao-bloco { background: #1e1e1e; padding: 20px; border-radius: 8px; margin-bottom: 25px; border: 1px solid #333; }
+        
+        .musica-card { background: #2a2a2a; padding: 15px; margin-bottom: 10px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; border-left: 5px solid #3498db; }
+        .musica-card.tocada { border-left-color: #e67e22; opacity: 0.8; }
+        
+        button { border: none; padding: 8px 12px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 0.85rem; }
+        .btn-tocar { background: #27ae60; color: #fff; }
+        .btn-tocar:hover { background: #2ecc71; }
+        .btn-excluir { background: #c0392b; color: #fff; }
+        .btn-excluir:hover { background: #e74c3c; }
+
+        .config-grupo { display: flex; gap: 15px; align-items: center; justify-content: center; flex-wrap: wrap; }
+        .config-grupo select { padding: 10px; background: #2a2a2a; color: #fff; border: 1px solid #444; border-radius: 5px; outline: none; }
+        .btn-salvar { background: #1db954; color: #000; padding: 10px 20px; }
+        .btn-salvar:hover { background: #1ed760; }
+
+        .status-show-box { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px; background: #252525; padding: 15px; border-radius: 6px; border: 1px solid #444; }
+        .btn-liberar { background: #27ae60; color: #fff; padding: 12px 20px; font-size: 1rem; border-radius: 6px; }
+        .btn-liberar:hover { background: #2ecc71; }
+        .btn-bloquear { background: #c0392b; color: #fff; padding: 12px 20px; font-size: 1rem; border-radius: 6px; }
+        .btn-bloquear:hover { background: #e74c3c; }
+
+        .subtitulo-grupo { display: flex; flex-direction: column; gap: 10px; }
+        .subtitulo-grupo textarea { width: 100%; height: 80px; padding: 12px; background: #2a2a2a; color: #fff; border: 1px solid #444; border-radius: 6px; box-sizing: border-box; font-size: 1rem; outline: none; resize: vertical; }
+        .subtitulo-grupo textarea:focus { border-color: #1db954; }
+
+        .secao-reset { text-align: center; margin-top: 30px; padding: 15px; border-top: 1px solid #333; }
+        .btn-reset { background: #c0392b; color: #fff; padding: 10px 20px; font-size: 0.9rem; border-radius: 5px; }
+        .btn-reset:hover { background: #e74c3c; }
+        
+        .btn-sair { background: #333; color: #ff5555; border: 1px solid #444; padding: 6px 14px; font-size: 0.8rem; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .btn-sair:hover { background: #444; border-color: #ff5555; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="tela-login">
+            <div class="login-card">
+                <h1>Painel do Artista</h1>
+                <p style="text-align: center; color: #888; font-size: 0.9rem; margin-bottom: 20px;">Faça login para gerenciar o show</p>
+                <div class="login-grupo">
+                    <label for="usuario-input">Usuário</label>
+                    <input type="text" id="usuario-input" placeholder="Digite seu usuário">
+                </div>
+                <div class="login-grupo">
+                    <label for="senha-input">Senha</label>
+                    <input type="password" id="senha-input" placeholder="Digite sua senha">
+                </div>
+                <button class="btn-entrar" onclick="fazerLogin()">Entrar</button>
+                <div id="erro-login">Usuário ou senha incorretos.</div>
+            </div>
+        </div>
+
+        <div id="painel-admin">
+            <div class="topo-painel">
+                <a href="cadastro.html" class="link-cadastro">📂 Cadastro de Repertório</a>
+                <button class="btn-sair" onclick="sair()">Sair / Logout</button>
+            </div>
+            
+            <h1>Painel do Artista</h1>
+
+            <div class="abas">
+                <button class="btn-aba ativo" onclick="mudarAba('fila', event)">🎵 Fila de Pedidos</button>
+                <button class="btn-aba" onclick="mudarAba('tocadas', event)">🎸 Músicas Tocadas</button>
+                <button class="btn-aba" onclick="mudarAba('configuracoes', event)">⚙️ Configurações & Show</button>
+            </div>
+
+            <div id="aba-fila" class="secao ativo">
+                <div class="secao-bloco">
+                    <h2>🎵 Fila de Pedidos Ativa</h2>
+                    <div id="lista-fila">Carregando fila...</div>
+                </div>
+            </div>
+
+            <div id="aba-tocadas" class="secao">
+                <div class="secao-bloco">
+                    <h2>🎸 Histórico de Músicas Tocadas</h2>
+                    <div id="lista-tocadas">Nenhuma música tocada ainda.</div>
+                </div>
+            </div>
+
+            <div id="aba-configuracoes" class="secao">
+                <div class="secao-bloco">
+                    <h2>🚀 Acesso do Público (Página Index)</h2>
+                    <div class="status-show-box">
+                        <div>
+                            <span style="font-size: 0.9rem; color: #aaa;">Status atual do acesso:</span><br>
+                            <strong id="label-status-show" style="font-size: 1.1rem; color: #e74c3c;">Fechado (Ainda não começou)</strong>
+                        </div>
+                        <div id="botao-status-container">
+                            <button class="btn-liberar" onclick="alternarLiberacaoShow('sim')">Liberar Show para o Público</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="secao-bloco">
+                    <h2>⚙️ Configurações do Show</h2>
+                    <div class="config-grupo" style="margin-bottom: 20px;">
+                        <label for="limite-select">Limite de pedidos por pessoa:</label>
+                        <select id="limite-select">
+                            <option value="ilimitado">Ilimitado</option>
+                            <option value="1">1 pedido</option>
+                            <option value="2">2 pedidos</option>
+                            <option value="3">3 pedidos</option>
+                            <option value="5">5 pedidos</option>
+                        </select>
+                        <button class="btn-salvar" onclick="salvarConfiguracoes()">Salvar Configurações</button>
+                    </div>
+                </div>
+
+                <div class="secao-bloco">
+                    <h2>📝 Subtítulo do Setlist (Página do Público)</h2>
+                    <div class="subtitulo-grupo">
+                        <textarea id="input-subtitulo" placeholder="Digite aqui o subtítulo ou recado maior para o público..."></textarea>
+                        <div style="text-align: right;">
+                            <button class="btn-salvar" onclick="salvarSubtitulo()">Confirmar Edição do Subtítulo</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="secao-reset">
+                    <button class="btn-reset" onclick="resetarSistema()">⚠️ Resetar Fila / Limpar Tudo</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API = "http://localhost:3000/api";
+        let statusShowGlobal = 'nao';
+
+        window.onload = function() {
+            const tokenSalvo = localStorage.getItem('token_admin');
+            if (tokenSalvo) {
+                verificarTokenAutomatico(tokenSalvo);
+            }
+            
+            // ATUALIZAÇÃO AUTOMÁTICA EM TEMPO REAL A CADA 4 SEGUNDOS
+            setInterval(() => {
+                const painelAdmin = document.getElementById('painel-admin');
+                if (painelAdmin && painelAdmin.style.display === 'block') {
+                    carregarPainel();
+                }
+            }, 4000);
+        };
+
+        function getAuthHeader() {
+            const token = localStorage.getItem('token_admin');
+            return {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            };
+        }
+
+        async function fazerLogin() {
+            const usuario = document.getElementById('usuario-input').value;
+            const senha = document.getElementById('senha-input').value;
+            const erroDiv = document.getElementById('erro-login');
+
+            const str = `${usuario}:${senha}`;
+            const utf8Bytes = new TextEncoder().encode(str);
+            let binary = '';
+            utf8Bytes.forEach(b => binary += String.fromCharCode(b));
+            const token = btoa(binary);
+
+            try {
+                const res = await fetch(`${API}/login`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (res.ok) {
+                    localStorage.setItem('token_admin', token);
+                    document.getElementById('tela-login').style.display = 'none';
+                    document.getElementById('painel-admin').style.display = 'block';
+                    carregarPainel();
+                } else {
+                    erroDiv.style.display = 'block';
+                }
+            } catch (e) {
+                erroDiv.textContent = 'Erro de conexão com o servidor.';
+                erroDiv.style.display = 'block';
+            }
+        }
+
+        async function verificarTokenAutomatico(token) {
+            try {
+                const res = await fetch(`${API}/login`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (res.ok) {
+                    document.getElementById('tela-login').style.display = 'none';
+                    document.getElementById('painel-admin').style.display = 'block';
+                    carregarPainel();
+                } else {
+                    localStorage.removeItem('token_admin');
+                }
+            } catch (e) {
+                // Servidor offline
+            }
+        }
+
+        function sair() {
+            localStorage.removeItem('token_admin');
+            document.getElementById('painel-admin').style.display = 'none';
+            document.getElementById('tela-login').style.display = 'flex';
+            document.getElementById('usuario-input').value = '';
+            document.getElementById('senha-input').value = '';
+        }
+
+        function mudarAba(aba, evento) {
+            document.querySelectorAll('.secao').forEach(s => s.classList.remove('ativo'));
+            document.querySelectorAll('.btn-aba').forEach(b => b.classList.remove('ativo'));
+
+            document.getElementById(`aba-${aba}`).classList.add('ativo');
+            evento.target.classList.add('ativo');
+
+            carregarPainel();
+        }
+
+        async function carregarPainel() {
+            try {
+                const [resFila, resConfig] = await Promise.all([
+                    fetch(`${API}/fila`),
+                    fetch(`${API}/config`)
+                ]);
+                
+                const fila = await resFila.json();
+                if (resConfig.ok) {
+                    const config = await resConfig.json();
+                    document.getElementById('limite-select').value = config.limite_pedidos || 'ilimitado';
+                    
+                    const textareaSub = document.getElementById('input-subtitulo');
+                    if (document.activeElement !== textareaSub) {
+                        textareaSub.value = config.subtitulo || '';
+                    }
+
+                    statusShowGlobal = config.show_liberado || 'nao';
+                    atualizarInterfaceStatusShow();
+                }
+
+                renderizarpaineis(fila);
+            } catch (e) {
+                console.error("Erro ao carregar painel", e);
+            }
+        }
+
+        function atualizarInterfaceStatusShow() {
+            const label = document.getElementById('label-status-show');
+            const containerBtn = document.getElementById('botao-status-container');
+
+            if (statusShowGlobal === 'sim') {
+                label.textContent = 'Liberado (Show em andamento 🎸)';
+                label.style.color = '#27ae60';
+                containerBtn.innerHTML = `<button class="btn-bloquear" onclick="alternarLiberacaoShow('nao')">Bloquear Acesso (Encerrar/Pausar)</button>`;
+            } else {
+                label.textContent = 'Fechado (Ainda não começou)';
+                label.style.color = '#e74c3c';
+                containerBtn.innerHTML = `<button class="btn-liberar" onclick="alternarLiberacaoShow('sim')">Liberar Show para o Público</button>`;
+            }
+        }
+
+        async function alternarLiberacaoShow(novoStatus) {
+            try {
+                const res = await fetch(`${API}/config`, {
+                    method: 'POST',
+                    headers: getAuthHeader(),
+                    body: JSON.stringify({ show_liberado: novoStatus })
+                });
+                if (res.ok) {
+                    statusShowGlobal = novoStatus;
+                    atualizarInterfaceStatusShow();
+                    alert(novoStatus === 'sim' ? 'Show liberado para o público com sucesso!' : 'Acesso bloqueado com sucesso!');
+                } else {
+                    alert('Erro ao atualizar status do show.');
+                }
+            } catch (e) {
+                alert('Erro de conexão com o servidor.');
+            }
+        }
+
+        function renderizarpaineis(fila) {
+            const containerFila = document.getElementById('lista-fila');
+            const containerTocadas = document.getElementById('lista-tocadas');
+            
+            containerFila.innerHTML = '';
+            containerTocadas.innerHTML = '';
+
+            const pendentes = fila.filter(p => !p.status || p.status === 'pendente');
+            const tocadas = fila.filter(p => p.status === 'tocada');
+
+            if (pendentes.length === 0) {
+                containerFila.innerHTML = '<p style="text-align:center; color:#777;">Nenhum pedido na fila no momento.</p>';
+            } else {
+                pendentes.forEach(p => {
+                    const idUnico = p.pedido_id || p.id;
+                    const div = document.createElement('div');
+                    div.className = 'musica-card';
+                    div.innerHTML = `
+                        <div>
+                            <strong style="font-size: 1.05rem;">${p.titulo}</strong> - <span style="color:#aaa;">${p.artista}</span>
+                            <div style="font-size: 0.85rem; color: #1db954; margin-top: 4px;">${p.dedicatoria || ''}</div>
+                            <div style="font-size: 0.75rem; color: #888; margin-top: 2px;">Votos: ${p.votos || 1}</div>
+                        </div>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <button class="btn-tocar" onclick="marcarTocada('${idUnico}')">Marcar Tocada</button>
+                            <button class="btn-excluir" onclick="excluirPedido('${idUnico}')">Excluir</button>
+                        </div>
+                    `;
+                    containerFila.appendChild(div);
+                });
+            }
+
+            if (tocadas.length === 0) {
+                containerTocadas.innerHTML = '<p style="text-align:center; color:#777;">Nenhuma música tocada ainda.</p>';
+            } else {
+                tocadas.forEach(p => {
+                    const idUnico = p.pedido_id || p.id;
+                    const div = document.createElement('div');
+                    div.className = 'musica-card tocada';
+                    div.innerHTML = `
+                        <div>
+                            <strong style="font-size: 1.05rem;">${p.titulo}</strong> - <span style="color:#aaa;">${p.artista}</span>
+                            <div style="font-size: 0.85rem; color: #e67e22; margin-top: 4px;">${p.dedicatoria || ''}</div>
+                        </div>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <span style="color: #e67e22; font-size: 0.85rem; font-weight: bold;">Tocada 🎸</span>
+                            <button class="btn-excluir" onclick="excluirPedido('${idUnico}')">Excluir</button>
+                        </div>
+                    `;
+                    containerTocadas.appendChild(div);
+                });
+            }
+        }
+
+        async function marcarTocada(pedido_id) {
+            try {
+                const res = await fetch(`${API}/fila/${pedido_id}`, {
+                    method: 'PATCH',
+                    headers: getAuthHeader(),
+                    body: JSON.stringify({ status: 'tocada' })
+                });
+                if (res.ok) carregarPainel();
+                else alert('Erro ao atualizar status.');
+            } catch (e) {
+                alert('Erro de conexão.');
+            }
+        }
+
+        async function excluirPedido(pedido_id) {
+            if (!confirm('Deseja realmente remover este pedido?')) return;
+            try {
+                const res = await fetch(`${API}/fila/${pedido_id}`, { 
+                    method: 'DELETE',
+                    headers: getAuthHeader()
+                });
+                if (res.ok) carregarPainel();
+                else alert('Erro ao excluir pedido.');
+            } catch (e) {
+                alert('Erro de conexão.');
+            }
+        }
+
+        async function salvarConfiguracoes() {
+            const limite = document.getElementById('limite-select').value;
+            try {
+                const res = await fetch(`${API}/config`, {
+                    method: 'POST',
+                    headers: getAuthHeader(),
+                    body: JSON.stringify({ limite_pedidos: limite })
+                });
+                if (res.ok) {
+                    alert('Configurações salvas com sucesso!');
+                } else {
+                    alert('Erro ao salvar configurações.');
+                }
+            } catch (e) {
+                alert('Erro de conexão com o servidor.');
+            }
+        }
+
+        async function salvarSubtitulo() {
+            const subtitulo = document.getElementById('input-subtitulo').value;
+            try {
+                const res = await fetch(`${API}/config`, {
+                    method: 'POST',
+                    headers: getAuthHeader(),
+                    body: JSON.stringify({ subtitulo })
+                });
+                if (res.ok) {
+                    alert('Subtítulo atualizado com sucesso!');
+                } else {
+                    alert('Erro ao salvar subtítulo.');
+                }
+            } catch (e) {
+                alert('Erro de conexão com o servidor.');
+            }
+        }
+
+        async function resetarSistema() {
+            if (!confirm('Tem certeza que deseja resetar toda a fila de pedidos e histórico? Esta ação não pode ser desfeita.')) return;
+            try {
+                const res = await fetch(`${API}/fila/resetar`, { 
+                    method: 'DELETE',
+                    headers: getAuthHeader()
+                });
+                if (res.ok) {
+                    alert('Fila resetada com sucesso!');
+                    carregarPainel();
+                } else {
+                    alert('Erro ao resetar a fila.');
+                }
+            } catch (e) {
+                alert('Erro de conexão com o servidor.');
+            }
+        }
+    </script>
+</body>
+</html>

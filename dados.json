@@ -1,0 +1,59 @@
+{
+  "fila": [],
+  "repertorio": [
+    {
+      "id": "mus_1785289763957gyaqp",
+      "titulo": "Neon",
+      "artista": "John Mayer",
+      "genero": "Pop Rock",
+      "origem": "Internacional"
+    },
+    {
+      "id": "mus_1785289775369i3mld",
+      "titulo": "Relicário",
+      "artista": "Nando Reis",
+      "genero": "Pop Rock",
+      "origem": "Nacional"
+    },
+    {
+      "id": "mus_1785289786014nq2eo",
+      "titulo": "Malandragem",
+      "artista": "Cássia Eller",
+      "genero": "Pop Rock",
+      "origem": "Nacional"
+    },
+    {
+      "id": "mus_1785289797215q753q",
+      "titulo": "Anna Julia",
+      "artista": "Los Hermanos",
+      "genero": "Pop Rock",
+      "origem": "Nacional"
+    },
+    {
+      "id": "mus_17852898120264l6pa",
+      "titulo": "Segundo Sol",
+      "artista": "Cássia Eller",
+      "genero": "Pop Rock",
+      "origem": "Nacional"
+    },
+    {
+      "id": "mus_1785289832857cooeo",
+      "titulo": "Como um Anjo",
+      "artista": "César Menotti e Fabiano",
+      "genero": "Sertanejo",
+      "origem": "Nacional"
+    },
+    {
+      "id": "1785300056946",
+      "titulo": "Será",
+      "artista": "Legião Urbana",
+      "genero": "Rock",
+      "origem": "Nacional"
+    }
+  ],
+  "config": {
+    "limite_pedidos": "2",
+    "show_liberado": "sim",
+    "subtitulo": "Show do Thó - Na casa da mamãe"
+  }
+}
