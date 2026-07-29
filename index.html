@@ -178,7 +178,7 @@
 
         async function carregarDados() {
             try {
-                const resConfig = await fetch(`${API}/config`);
+                const resConfig = await fetch(`${API}/api/config`);
                 if (resConfig.ok) {
                     configGlobal = await resConfig.json();
                 }
@@ -196,7 +196,7 @@
                     subBloqueadoEl.style.display = 'none';
                 }
 
-                const resFilaTemp = await fetch(`${API}/fila`);
+                const resFilaTemp = await fetch(`${API}/api/fila`);
                 const filaTemp = await resFilaTemp.json();
                 limparChavesLocaisSeNecessario(filaTemp);
 
@@ -221,7 +221,7 @@
                     return;
                 }
 
-                const resRep = await fetch(`${API}/repertorio`);
+                const resRep = await fetch(`${API}/api/repertorio`);
                 repertorioGeral = await resRep.json();
                 filaGeral = filaTemp;
 
@@ -505,7 +505,7 @@
 
         async function enviarRequisicaoPedido(dedicatoria) {
             try {
-                const res = await fetch(`${API}/fila`, {
+                const res = await fetch(`${API}/api/fila`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
@@ -537,7 +537,7 @@
             }
 
             try {
-                const res = await fetch(`${API}/fila/${pedido_id}/voto`, { method: 'PATCH' });
+                const res = await fetch(`${API}/api/fila/${pedido_id}/voto`, { method: 'PATCH' });
                 const data = await res.json();
                 if (!res.ok) {
                     alert('Pedido destacado com sucesso!');

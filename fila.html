@@ -198,7 +198,7 @@
             const token = btoa(binary);
 
             try {
-                const res = await fetch(`${API}/login`, {
+                const res = await fetch(`${API}/api/login`, {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
@@ -219,7 +219,7 @@
 
         async function verificarTokenAutomatico(token) {
             try {
-                const res = await fetch(`${API}/login`, {
+                const res = await fetch(`${API}/api/login`, {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
@@ -257,8 +257,8 @@
         async function carregarPainel() {
             try {
                 const [resFila, resConfig] = await Promise.all([
-                    fetch(`${API}/fila`),
-                    fetch(`${API}/config`)
+                    fetch(`${API}/api/fila`),
+                    fetch(`${API}/api/config`)
                 ]);
                 
                 const fila = await resFila.json();
@@ -298,7 +298,7 @@
 
         async function alternarLiberacaoShow(novoStatus) {
             try {
-                const res = await fetch(`${API}/config`, {
+                const res = await fetch(`${API}/api/config`, {
                     method: 'POST',
                     headers: getAuthHeader(),
                     body: JSON.stringify({ show_liberado: novoStatus })
@@ -371,7 +371,7 @@
 
         async function marcarTocada(pedido_id) {
             try {
-                const res = await fetch(`${API}/fila/${pedido_id}`, {
+                const res = await fetch(`${API}/api/fila/${pedido_id}`, {
                     method: 'PATCH',
                     headers: getAuthHeader(),
                     body: JSON.stringify({ status: 'tocada' })
@@ -386,7 +386,7 @@
         async function excluirPedido(pedido_id) {
             if (!confirm('Deseja realmente remover este pedido?')) return;
             try {
-                const res = await fetch(`${API}/fila/${pedido_id}`, { 
+                const res = await fetch(`${API}/api/fila/${pedido_id}`, { 
                     method: 'DELETE',
                     headers: getAuthHeader()
                 });
@@ -400,7 +400,7 @@
         async function salvarConfiguracoes() {
             const limite = document.getElementById('limite-select').value;
             try {
-                const res = await fetch(`${API}/config`, {
+                const res = await fetch(`${API}/api/config`, {
                     method: 'POST',
                     headers: getAuthHeader(),
                     body: JSON.stringify({ limite_pedidos: limite })
@@ -418,7 +418,7 @@
         async function salvarSubtitulo() {
             const subtitulo = document.getElementById('input-subtitulo').value;
             try {
-                const res = await fetch(`${API}/config`, {
+                const res = await fetch(`${API}/api/config`, {
                     method: 'POST',
                     headers: getAuthHeader(),
                     body: JSON.stringify({ subtitulo })
@@ -436,7 +436,7 @@
         async function resetarSistema() {
             if (!confirm('Tem certeza que deseja resetar toda a fila de pedidos e histórico? Esta ação não pode ser desfeita.')) return;
             try {
-                const res = await fetch(`${API}/fila/resetar`, { 
+                const res = await fetch(`${API}/api/fila/resetar`, { 
                     method: 'DELETE',
                     headers: getAuthHeader()
                 });
