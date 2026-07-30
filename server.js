@@ -85,7 +85,24 @@ app.post('/api/repertorio', autenticarAdmin, (req, res) => {
     }
     const dados = lerDados();
     if (!dados.repertorio) dados.repertorio = [];
-    const novaMusica = { id: Date.now().toString(), titulo, artista, genero: genero || '', origem: origem || 'Nacional' };
+
+    const musicaDuplicada = dados.repertorio.some(m => 
+        m.titulo.trim().toLowerCase() === titulo.trim().toLowerCase() && 
+        m.artista.trim().toLowerCase() === artista.trim().toLowerCase()
+    );
+
+    if (musicaDuplicada) {
+        return res.status(400).json({ erro: 'Esta música já está cadastrada no repertório!' });
+    }
+
+    const novaMusica = { 
+        id: Date.now().toString(), 
+        titulo: titulo.trim(), 
+        artista: artista.trim(), 
+        genero: genero ? genero.trim() : '', 
+        origem: origem || 'Nacional' 
+    };
+
     dados.repertorio.push(novaMusica);
     salvarDados(dados);
     res.status(201).json({ sucesso: true, musica: novaMusica });
@@ -180,7 +197,6 @@ app.delete('/api/fila/resetar', autenticarAdmin, (req, res) => {
     dados.fila = [];
     if(dados.usuarios) dados.usuarios = {};
     
-    // Reseta o subtítulo e gera novo ID de evento
     dados.config.subtitulo = "";
     dados.config.event_id = Date.now().toString();
     
