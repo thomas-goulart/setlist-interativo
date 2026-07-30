@@ -135,7 +135,6 @@ app.post('/api/fila', (req, res) => {
     const dados = lerDados();
     if (!dados.config) dados.config = {};
     
-    // Validação de segurança do event_id
     if (event_id && dados.config.event_id && event_id !== dados.config.event_id) {
         return res.status(400).json({ erro: 'Este show já foi encerrado ou atualizado. Atualize sua página.' });
     }
@@ -180,10 +179,13 @@ app.delete('/api/fila/resetar', autenticarAdmin, (req, res) => {
     const dados = lerDados();
     dados.fila = [];
     if(dados.usuarios) dados.usuarios = {};
-    // Gera um novo event_id único a cada reset para isolar completamente a sessão
+    
+    // Reseta o subtítulo e gera novo ID de evento
+    dados.config.subtitulo = "";
     dados.config.event_id = Date.now().toString();
+    
     salvarDados(dados);
-    res.json({ sucesso: true, resetar_local: true, mensagem: 'Fila resetada e novo evento iniciado com sucesso.' });
+    res.json({ sucesso: true, resetar_local: true, mensagem: 'Fila e subtítulo resetados com sucesso.' });
 });
 
 app.delete('/api/fila/:id', autenticarAdmin, (req, res) => {
