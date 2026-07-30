@@ -59,13 +59,11 @@
 </head>
 <body>
     <div class="container">
-        <!-- CABEÇALHO SIMPLES -->
         <header style="display: flex; justify-content: space-between; align-items: center; background: #1e1e1e; padding: 10px 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #333;">
             <span style="font-weight: bold; color: #1db954;">Setlist Interativo</span>
             <a href="fila.html" style="color: #fff; text-decoration: none; background: #222; padding: 8px 12px; border-radius: 6px; border: 1px solid #444; font-size: 0.9rem;">Painel do Artista</a>
         </header>
 
-        <!-- PADRÃO INICIAL VISÍVEL PARA EVITAR TELA EM BRANCO -->
         <div id="conteudo-bloqueado" class="tela-bloqueio">
             <div id="bloqueado-boas-vindas" style="font-size: 1.3rem; color: #1db954; font-weight: bold; margin-bottom: 20px; display: none;"></div>
             <span style="font-size: 4rem; margin-bottom: 10px;">⏳</span>
@@ -147,9 +145,25 @@
         const API = "https://setlist-interativo-api.onrender.com";
         let repertorioGeral = [];
         let filaGeral = [];
-        let configGlobal = { limite_pedidos: 'ilimitado', subtitulo: '', show_liberado: 'nao' };
+        let configGlobal = { limite_pedidos: 'ilimitado', subtitulo: '', show_liberado: 'nao', event_id: '' };
         let musicaSelecionadaTitulo = '';
         let musicaSelecionadaArtista = '';
+
+        function gerenciarSessaoEvento(event_idServidor) {
+            if (!event_idServidor) return;
+            const eventIdSalvo = localStorage.getItem('current_event_id');
+            if (eventIdSalvo !== event_idServidor) {
+                const chavesParaRemover = [];
+                for (let i = 0; i < localStorage.length; i++) {
+                    const chave = localStorage.key(i);
+                    if (chave && (chave.startsWith("meu_pedido_") || chave.startsWith("ja_votou_"))) {
+                        chavesParaRemover.push(chave);
+                    }
+                }
+                chavesParaRemover.forEach(c => localStorage.removeItem(c));
+                localStorage.setItem('current_event_id', event_idServidor);
+            }
+        }
 
         function limparChavesLocaisSeNecessario(filaAtual) {
             const chavesParaRemover = [];
@@ -181,6 +195,7 @@
                 const resConfig = await fetch(`${API}/api/config`);
                 if (resConfig.ok) {
                     configGlobal = await resConfig.json();
+                    gerenciarSessaoEvento(configGlobal.event_id);
                 }
 
                 const elBloqueado = document.getElementById('conteudo-bloqueado');
@@ -511,7 +526,8 @@
                     body: JSON.stringify({ 
                         titulo: musicaSelecionadaTitulo, 
                         artista: musicaSelecionadaArtista, 
-                        dedicatoria 
+                        dedicatoria,
+                        event_id: configGlobal.event_id 
                     })
                 });
                 const data = await res.json();
@@ -537,10 +553,14 @@
             }
 
             try {
-                const res = await fetch(`${API}/api/fila/${pedido_id}/voto`, { method: 'PATCH' });
+                const res = await fetch(`${API}/api/fila/${pedido_id}/voto`, { 
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ event_id: configGlobal.event_id })
+                });
                 const data = await res.json();
                 if (!res.ok) {
-                    alert('Pedido destacado com sucesso!');
+                    alert(data.erro || 'Erro ao atualizar voto.');
                     return;
                 }
                 

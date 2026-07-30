@@ -15,14 +15,20 @@ const ADMIN_PASS = '123456';
 
 function lerDados() {
     if (!fs.existsSync(ARQUIVO_DADOS)) {
-        const dadosIniciais = { fila: [], repertorio: [], config: { limite_pedidos: 'ilimitado', show_liberado: 'nao', subtitulo: '' } };
+        const dadosIniciais = { fila: [], repertorio: [], config: { limite_pedidos: 'ilimitado', show_liberado: 'nao', subtitulo: '', event_id: Date.now().toString() } };
         fs.writeFileSync(ARQUIVO_DADOS, JSON.stringify(dadosIniciais, null, 2));
         return dadosIniciais;
     }
     try {
-        return JSON.parse(fs.readFileSync(ARQUIVO_DADOS, 'utf8'));
+        const dados = JSON.parse(fs.readFileSync(ARQUIVO_DADOS, 'utf8'));
+        if (!dados.config) dados.config = {};
+        if (!dados.config.event_id) {
+            dados.config.event_id = Date.now().toString();
+            fs.writeFileSync(ARQUIVO_DADOS, JSON.stringify(dados, null, 2));
+        }
+        return dados;
     } catch (e) {
-        return { fila: [], repertorio: [], config: { limite_pedidos: 'ilimitado', show_liberado: 'nao', subtitulo: '' } };
+        return { fila: [], repertorio: [], config: { limite_pedidos: 'ilimitado', show_liberado: 'nao', subtitulo: '', event_id: Date.now().toString() } };
     }
 }
 
@@ -113,7 +119,6 @@ app.delete('/api/repertorio/:id', autenticarAdmin, (req, res) => {
     res.json({ sucesso: true, mensagem: 'Música excluída.' });
 });
 
-// GET /api/fila: Retorna a fila ordenada automaticamente por votos (maior para o menor)
 app.get('/api/fila', (req, res) => {
     const dados = lerDados();
     let fila = dados.fila || [];
@@ -122,12 +127,19 @@ app.get('/api/fila', (req, res) => {
 });
 
 app.post('/api/fila', (req, res) => {
-    const { titulo, artista, dedicatoria } = req.body;
+    const { titulo, artista, dedicatoria, event_id } = req.body;
     if (!titulo || !artista) {
         return res.status(400).json({ erro: 'Título e artista são obrigatórios.' });
     }
 
     const dados = lerDados();
+    if (!dados.config) dados.config = {};
+    
+    // Validação de segurança do event_id
+    if (event_id && dados.config.event_id && event_id !== dados.config.event_id) {
+        return res.status(400).json({ erro: 'Este show já foi encerrado ou atualizado. Atualize sua página.' });
+    }
+
     if (!dados.fila) dados.fila = [];
 
     const novoPedido = {
@@ -146,7 +158,13 @@ app.post('/api/fila', (req, res) => {
 
 app.patch('/api/fila/:id/voto', (req, res) => {
     const { id } = req.params;
+    const { event_id } = req.body;
     const dados = lerDados();
+    
+    if (event_id && dados.config && dados.config.event_id && event_id !== dados.config.event_id) {
+        return res.status(400).json({ erro: 'Este show já foi encerrado ou atualizado.' });
+    }
+
     const pedido = (dados.fila || []).find(p => p.pedido_id === id || p.id === id);
 
     if (!pedido) {
@@ -162,8 +180,10 @@ app.delete('/api/fila/resetar', autenticarAdmin, (req, res) => {
     const dados = lerDados();
     dados.fila = [];
     if(dados.usuarios) dados.usuarios = {};
+    // Gera um novo event_id único a cada reset para isolar completamente a sessão
+    dados.config.event_id = Date.now().toString();
     salvarDados(dados);
-    res.json({ sucesso: true, resetar_local: true, mensagem: 'Fila resetada com sucesso.' });
+    res.json({ sucesso: true, resetar_local: true, mensagem: 'Fila resetada e novo evento iniciado com sucesso.' });
 });
 
 app.delete('/api/fila/:id', autenticarAdmin, (req, res) => {

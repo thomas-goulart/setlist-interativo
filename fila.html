@@ -169,7 +169,6 @@
                 verificarTokenAutomatico(tokenSalvo);
             }
             
-            // ATUALIZAÇÃO AUTOMÁTICA EM TEMPO REAL A CADA 4 SEGUNDOS
             setInterval(() => {
                 const painelAdmin = document.getElementById('painel-admin');
                 if (painelAdmin && painelAdmin.style.display === 'block') {
@@ -231,9 +230,7 @@
                 } else {
                     localStorage.removeItem('token_admin');
                 }
-            } catch (e) {
-                // Servidor offline
-            }
+            } catch (e) {}
         }
 
         function sair() {
