@@ -55,15 +55,14 @@
         .btn-confirmar { background: #1db954; color: #000; }
         .campo-etapa { display: none; }
         .campo-etapa.ativo { display: block; }
+
+        .rodape-discreto { text-align: center; margin-top: 40px; margin-bottom: 20px; font-size: 0.8rem; }
+        .rodape-discreto a { color: #555; text-decoration: none; transition: color 0.2s; }
+        .rodape-discreto a:hover { color: #888; text-decoration: underline; }
     </style>
 </head>
 <body>
     <div class="container">
-        <header style="display: flex; justify-content: space-between; align-items: center; background: #1e1e1e; padding: 10px 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #333;">
-            <span style="font-weight: bold; color: #1db954;">Setlist Interativo</span>
-            <a href="fila.html" style="color: #fff; text-decoration: none; background: #222; padding: 8px 12px; border-radius: 6px; border: 1px solid #444; font-size: 0.9rem;">Painel do Artista</a>
-        </header>
-
         <div id="conteudo-bloqueado" class="tela-bloqueio">
             <div id="bloqueado-boas-vindas" style="font-size: 1.3rem; color: #1db954; font-weight: bold; margin-bottom: 20px; display: none;"></div>
             <span style="font-size: 4rem; margin-bottom: 10px;">⏳</span>
@@ -108,6 +107,10 @@
             <div id="aba-pedidas" class="secao">
                 <div id="lista-pedidas-tocadas">Carregando histórico...</div>
             </div>
+        </div>
+
+        <div class="rodape-discreto">
+            <a href="fila.html">Painel do Artista</a>
         </div>
     </div>
 
