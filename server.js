@@ -1,7 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const fs = require('fs');
-const path = require('path');
+const mongoose = require('mongoose');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -9,32 +8,70 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-const ARQUIVO_DADOS = path.join(__dirname, 'dados.json');
+const MONGO_URL = process.env.MONGO_URL;
+
+mongoose.connect(MONGO_URL)
+    .then(() => console.log('Conectado ao MongoDB Atlas com sucesso!'))
+    .catch(err => console.error('Erro ao conectar ao MongoDB:', err));
+
+const configSchema = new mongoose.Schema({
+    limite_pedidos: { type: String, default: 'ilimitado' },
+    show_liberado: { type: String, default: 'nao' },
+    subtitulo: { type: String, default: '' },
+    event_id: { type: String, default: () => Date.now().toString() }
+});
+
+const musicaSchema = new mongoose.Schema({
+    id: { type: String, required: true },
+    titulo: { type: String, required: true },
+    artista: { type: String, required: true },
+    genero: { type: String, default: '' },
+    origem: { type: String, default: 'Nacional' }
+});
+
+const pedidoSchema = new mongoose.Schema({
+    pedido_id: { type: String, required: true },
+    titulo: { type: String, required: true },
+    artista: { type: String, required: true },
+    dedicatoria: { type: String, default: '' },
+    status: { type: String, default: 'pendente' },
+    votos: { type: Number, default: 1 }
+});
+
+const AppData = mongoose.model('AppData', new mongoose.Schema({
+    tipo: { type: String, default: 'dados_gerais', unique: true },
+    config: configSchema,
+    repertorio: [musicaSchema],
+    fila: [pedidoSchema]
+}));
+
+async function lerDados() {
+    let dados = await AppData.findOne({ tipo: 'dados_gerais' });
+    if (!dados) {
+        dados = new AppData({
+            tipo: 'dados_gerais',
+            config: { limite_pedidos: 'ilimitado', show_liberado: 'nao', subtitulo: '', event_id: Date.now().toString() },
+            repertorio: [],
+            fila: []
+        });
+        await dados.save();
+    }
+    if (!dados.config) {
+        dados.config = { limite_pedidos: 'ilimitado', show_liberado: 'nao', subtitulo: '', event_id: Date.now().toString() };
+    }
+    if (!dados.config.event_id) {
+        dados.config.event_id = Date.now().toString();
+        await dados.save();
+    }
+    return dados;
+}
+
+async function salvarDados(dadosObj) {
+    await dadosObj.save();
+}
+
 const ADMIN_USER = 'admin';
 const ADMIN_PASS = '123456';
-
-function lerDados() {
-    if (!fs.existsSync(ARQUIVO_DADOS)) {
-        const dadosIniciais = { fila: [], repertorio: [], config: { limite_pedidos: 'ilimitado', show_liberado: 'nao', subtitulo: '', event_id: Date.now().toString() } };
-        fs.writeFileSync(ARQUIVO_DADOS, JSON.stringify(dadosIniciais, null, 2));
-        return dadosIniciais;
-    }
-    try {
-        const dados = JSON.parse(fs.readFileSync(ARQUIVO_DADOS, 'utf8'));
-        if (!dados.config) dados.config = {};
-        if (!dados.config.event_id) {
-            dados.config.event_id = Date.now().toString();
-            fs.writeFileSync(ARQUIVO_DADOS, JSON.stringify(dados, null, 2));
-        }
-        return dados;
-    } catch (e) {
-        return { fila: [], repertorio: [], config: { limite_pedidos: 'ilimitado', show_liberado: 'nao', subtitulo: '', event_id: Date.now().toString() } };
-    }
-}
-
-function salvarDados(dados) {
-    fs.writeFileSync(ARQUIVO_DADOS, JSON.stringify(dados, null, 2));
-}
 
 function autenticarAdmin(req, res, next) {
     const authHeader = req.headers['authorization'];
@@ -59,31 +96,33 @@ app.post('/api/login', autenticarAdmin, (req, res) => {
     res.json({ sucesso: true, mensagem: 'Autenticado com sucesso!' });
 });
 
-app.get('/api/config', (req, res) => {
-    res.json(lerDados().config || {});
+app.get('/api/config', async (req, res) => {
+    const dados = await lerDados();
+    res.json(dados.config || {});
 });
 
-app.post('/api/config', autenticarAdmin, (req, res) => {
+app.post('/api/config', autenticarAdmin, async (req, res) => {
     const { limite_pedidos, show_liberado, subtitulo } = req.body;
-    const dados = lerDados();
+    const dados = await lerDados();
     if (!dados.config) dados.config = {};
     if (limite_pedidos !== undefined) dados.config.limite_pedidos = limite_pedidos;
     if (show_liberado !== undefined) dados.config.show_liberado = show_liberado;
     if (subtitulo !== undefined) dados.config.subtitulo = subtitulo;
-    salvarDados(dados);
+    await salvarDados(dados);
     res.json({ sucesso: true, config: dados.config });
 });
 
-app.get('/api/repertorio', (req, res) => {
-    res.json(lerDados().repertorio || []);
+app.get('/api/repertorio', async (req, res) => {
+    const dados = await lerDados();
+    res.json(dados.repertorio || []);
 });
 
-app.post('/api/repertorio', autenticarAdmin, (req, res) => {
+app.post('/api/repertorio', autenticarAdmin, async (req, res) => {
     const { titulo, artista, genero, origem } = req.body;
     if (!titulo || !artista) {
         return res.status(400).json({ erro: 'Título e artista são obrigatórios.' });
     }
-    const dados = lerDados();
+    const dados = await lerDados();
     if (!dados.repertorio) dados.repertorio = [];
 
     const musicaDuplicada = dados.repertorio.some(m => 
@@ -104,14 +143,14 @@ app.post('/api/repertorio', autenticarAdmin, (req, res) => {
     };
 
     dados.repertorio.push(novaMusica);
-    salvarDados(dados);
+    await salvarDados(dados);
     res.status(201).json({ sucesso: true, musica: novaMusica });
 });
 
-app.put('/api/repertorio/:id', autenticarAdmin, (req, res) => {
+app.put('/api/repertorio/:id', autenticarAdmin, async (req, res) => {
     const { id } = req.params;
     const { titulo, artista, genero, origem } = req.body;
-    const dados = lerDados();
+    const dados = await lerDados();
     const musica = (dados.repertorio || []).find(m => m.id === id);
     if (!musica) {
         return res.status(404).json({ erro: 'Música não encontrada.' });
@@ -120,36 +159,36 @@ app.put('/api/repertorio/:id', autenticarAdmin, (req, res) => {
     if (artista) musica.artista = artista;
     if (genero !== undefined) musica.genero = genero;
     if (origem) musica.origem = origem;
-    salvarDados(dados);
+    await salvarDados(dados);
     res.json({ sucesso: true, musica });
 });
 
-app.delete('/api/repertorio/:id', autenticarAdmin, (req, res) => {
+app.delete('/api/repertorio/:id', autenticarAdmin, async (req, res) => {
     const { id } = req.params;
-    const dados = lerDados();
+    const dados = await lerDados();
     const tamanhoInicial = (dados.repertorio || []).length;
     dados.repertorio = (dados.repertorio || []).filter(m => m.id !== id);
     if (dados.repertorio.length === tamanhoInicial) {
         return res.status(404).json({ erro: 'Música não encontrada.' });
     }
-    salvarDados(dados);
+    await salvarDados(dados);
     res.json({ sucesso: true, mensagem: 'Música excluída.' });
 });
 
-app.get('/api/fila', (req, res) => {
-    const dados = lerDados();
+app.get('/api/fila', async (req, res) => {
+    const dados = await lerDados();
     let fila = dados.fila || [];
     fila.sort((a, b) => (b.votos || 1) - (a.votos || 1));
     res.json(fila);
 });
 
-app.post('/api/fila', (req, res) => {
+app.post('/api/fila', async (req, res) => {
     const { titulo, artista, dedicatoria, event_id } = req.body;
     if (!titulo || !artista) {
         return res.status(400).json({ erro: 'Título e artista são obrigatórios.' });
     }
 
-    const dados = lerDados();
+    const dados = await lerDados();
     if (!dados.config) dados.config = {};
     
     if (event_id && dados.config.event_id && event_id !== dados.config.event_id) {
@@ -168,14 +207,14 @@ app.post('/api/fila', (req, res) => {
     };
 
     dados.fila.push(novoPedido);
-    salvarDados(dados);
+    await salvarDados(dados);
     res.status(201).json({ sucesso: true, pedido: novoPedido });
 });
 
-app.patch('/api/fila/:id/voto', (req, res) => {
+app.patch('/api/fila/:id/voto', async (req, res) => {
     const { id } = req.params;
     const { event_id } = req.body;
-    const dados = lerDados();
+    const dados = await lerDados();
     
     if (event_id && dados.config && dados.config.event_id && event_id !== dados.config.event_id) {
         return res.status(400).json({ erro: 'Este show já foi encerrado ou atualizado.' });
@@ -188,39 +227,39 @@ app.patch('/api/fila/:id/voto', (req, res) => {
     }
 
     pedido.votos = (pedido.votos || 1) + 1;
-    salvarDados(dados);
+    await salvarDados(dados);
     res.json({ sucesso: true, mensagem: 'Pedido destacado com sucesso!', pedido });
 });
 
-app.delete('/api/fila/resetar', autenticarAdmin, (req, res) => {
-    const dados = lerDados();
+app.delete('/api/fila/resetar', autenticarAdmin, async (req, res) => {
+    const dados = await lerDados();
     dados.fila = [];
     if(dados.usuarios) dados.usuarios = {};
     
     dados.config.subtitulo = "";
     dados.config.event_id = Date.now().toString();
     
-    salvarDados(dados);
+    await salvarDados(dados);
     res.json({ sucesso: true, resetar_local: true, mensagem: 'Fila e subtítulo resetados com sucesso.' });
 });
 
-app.delete('/api/fila/:id', autenticarAdmin, (req, res) => {
+app.delete('/api/fila/:id', autenticarAdmin, async (req, res) => {
     const { id } = req.params;
-    const dados = lerDados();
+    const dados = await lerDados();
     const tamanhoInicial = (dados.fila || []).length;
     dados.fila = (dados.fila || []).filter(p => p.pedido_id !== id && p.id !== id);
 
     if (dados.fila.length === tamanhoInicial) {
         return res.status(404).json({ erro: 'Pedido não encontrado.' });
     }
-    salvarDados(dados);
+    await salvarDados(dados);
     res.json({ sucesso: true, mensagem: 'Pedido excluído.' });
 });
 
-app.patch('/api/fila/:id', autenticarAdmin, (req, res) => {
+app.patch('/api/fila/:id', autenticarAdmin, async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
-    const dados = lerDados();
+    const dados = await lerDados();
     const pedido = (dados.fila || []).find(p => p.pedido_id === id || p.id === id);
 
     if (!pedido) {
@@ -232,7 +271,7 @@ app.patch('/api/fila/:id', autenticarAdmin, (req, res) => {
             pedido.votos = Math.max(pedido.votos || 1, 1);
         }
     }
-    salvarDados(dados);
+    await salvarDados(dados);
     res.json({ sucesso: true, pedido });
 });
 
