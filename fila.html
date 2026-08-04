@@ -105,6 +105,10 @@
                         <input type="text" id="signup-nome" placeholder="Ex: Banda Rock In Rio">
                     </div>
                     <div class="login-grupo">
+                        <label for="signup-email">E-mail para Confirmação</label>
+                        <input type="email" id="signup-email" placeholder="seu@email.com">
+                    </div>
+                    <div class="login-grupo">
                         <label for="signup-usuario">Usuário</label>
                         <input type="text" id="signup-usuario" placeholder="Escolha um usuário">
                     </div>
@@ -114,7 +118,7 @@
                     </div>
                     <button class="btn-entrar" onclick="fazerSignup()">Cadastrar</button>
                     <div id="erro-signup">Erro ao cadastrar.</div>
-                    <div id="sucesso-signup">Conta criada com sucesso! Redirecionando...</div>
+                    <div id="sucesso-signup">Conta criada com sucesso! Aguarde a aprovação.</div>
                     <div class="toggle-link">
                         Já tem uma conta? <a onclick="alternarTelaAuth('login')">Fazer login</a>
                     </div>
@@ -288,6 +292,8 @@
                     document.getElementById('painel-admin').style.display = 'block';
                     carregarPainel();
                 } else {
+                    const data = await res.json();
+                    erroDiv.textContent = data.erro || 'Usuário ou senha incorretos.';
                     erroDiv.style.display = 'block';
                 }
             } catch (e) {
@@ -298,6 +304,7 @@
 
         async function fazerSignup() {
             const nome = document.getElementById('signup-nome').value.trim();
+            const email = document.getElementById('signup-email').value.trim();
             const username = document.getElementById('signup-usuario').value.trim();
             const senha = document.getElementById('signup-senha').value.trim();
             const erroDiv = document.getElementById('erro-signup');
@@ -306,8 +313,8 @@
             erroDiv.style.display = 'none';
             sucessoDiv.style.display = 'none';
 
-            if (!nome || !username || !senha) {
-                erroDiv.textContent = 'Preencha todos os campos.';
+            if (!nome || !email || !username || !senha) {
+                erroDiv.textContent = 'Preencha todos os campos, incluindo o e-mail.';
                 erroDiv.style.display = 'block';
                 return;
             }
@@ -316,18 +323,15 @@
                 const res = await fetch(`${API}/api/signup`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ nome, username, senha })
+                    body: JSON.stringify({ nome, email, username, senha })
                 });
 
                 const data = await res.json();
                 if (res.ok) {
                     sucessoDiv.style.display = 'block';
                     setTimeout(() => {
-                        document.getElementById('usuario-input').value = username;
-                        document.getElementById('senha-input').value = senha;
                         alternarTelaAuth('login');
-                        fazerLogin();
-                    }, 1200);
+                    }, 2500);
                 } else {
                     erroDiv.textContent = data.erro || 'Erro ao criar conta.';
                     erroDiv.style.display = 'block';
@@ -407,7 +411,6 @@
                     }
 
                     if (perfil.slug) {
-                        // Monta o link público com base no domínio atual ou raiz da hospedagem (ex: /show/slug)
                         const urlBase = window.location.origin;
                         const linkPublico = `${urlBase}/show/${perfil.slug}`;
                         

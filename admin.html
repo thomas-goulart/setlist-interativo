@@ -136,7 +136,7 @@
                     <div>
                         <strong style="font-size: 1.05rem;">${art.nome}</strong> 
                         <span class="badge-status ${art.aprovado ? 'aprovado' : 'pendente'}">${art.aprovado ? 'Aprovado' : 'Pendente'}</span><br>
-                        <span style="color:#aaa; font-size: 0.85rem;">Usuário: ${art.username} | Slug: /show/${art.slug}</span>
+                        <span style="color:#aaa; font-size: 0.85rem;">E-mail: ${art.email || 'Não informado'} | Usuário: ${art.username} | Slug: /show/${art.slug}</span>
                     </div>
                     <div style="display: flex; gap: 8px;">
                         <button class="${art.aprovado ? 'btn-bloquear' : 'btn-aprovar'}" onclick="alternarAprovacao('${art._id}', ${!art.aprovado})">

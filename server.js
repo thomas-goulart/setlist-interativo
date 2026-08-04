@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
+const nodemailer = require('nodemailer');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -13,6 +14,15 @@ const MONGO_URL = process.env.MONGO_URL;
 mongoose.connect(MONGO_URL)
     .then(() => console.log('Conectado ao MongoDB Atlas com sucesso!'))
     .catch(err => console.error('Erro ao conectar ao MongoDB:', err));
+
+// Configuração do Transporter de E-mail (Substitua pelos seus dados ou variáveis de ambiente)
+const transporter = nodemailer.createTransport({
+    service: 'gmail', // Ou outro provedor SMTP
+    auth: {
+        user: process.env.EMAIL_USER || 'seu-email@gmail.com',
+        pass: process.env.EMAIL_PASS || 'sua-senha-de-app'
+    }
+});
 
 const configSchema = new mongoose.Schema({
     limite_pedidos: { type: String, default: 'ilimitado' },
@@ -42,6 +52,7 @@ const artistSchema = new mongoose.Schema({
     nome: { type: String, required: true },
     username: { type: String, required: true, unique: true },
     senha: { type: String, required: true },
+    email: { type: String, required: true },
     slug: { type: String, required: true, unique: true },
     aprovado: { type: Boolean, default: false }
 });
@@ -132,8 +143,24 @@ app.patch('/api/admin/artistas/:id/aprovar', autenticarSuperAdmin, async (req, r
         const artista = await Artist.findById(req.params.id);
         if (!artista) return res.status(404).json({ erro: 'Artista não encontrado.' });
         
+        const statusAnterior = artista.aprovado;
         artista.aprovado = aprovado;
         await artista.save();
+
+        // Se a conta foi aprovada agora, envia o e-mail de confirmação
+        if (!statusAnterior && aprovado === true && artista.email) {
+            try {
+                await transporter.sendMail({
+                    from: '"Setlist Interativo" <no-reply@setlist.com>',
+                    to: artista.email,
+                    subject: 'Sua conta foi aprovada! 🎸',
+                    text: `Olá ${artista.nome},\n\nSua conta no Setlist Interativo foi aprovada pelo administrador com sucesso! Você já pode fazer login e gerenciar os seus shows.\n\nAcesse o painel e divirta-se!`
+                });
+            } catch (mailErr) {
+                console.error('Erro ao enviar e-mail de aprovação:', mailErr);
+            }
+        }
+
         res.json({ sucesso: true, artista });
     } catch (e) {
         res.status(500).json({ erro: 'Erro ao atualizar status.' });
@@ -151,12 +178,12 @@ app.delete('/api/admin/artistas/:id', autenticarSuperAdmin, async (req, res) => 
     }
 });
 
-// Rota de Cadastro de Novos Artistas
+// Rota de Cadastro de Novos Artistas com E-mail
 app.post('/api/signup', async (req, res) => {
     try {
-        const { nome, username, senha } = req.body;
-        if (!nome || !username || !senha) {
-            return res.status(400).json({ erro: 'Nome, usuário e senha são obrigatórios.' });
+        const { nome, username, senha, email } = req.body;
+        if (!nome || !username || !senha || !email) {
+            return res.status(400).json({ erro: 'Nome, usuário, senha e e-mail são obrigatórios.' });
         }
 
         const usernameExistente = await Artist.findOne({ username });
@@ -177,7 +204,7 @@ app.post('/api/signup', async (req, res) => {
             contador++;
         }
 
-        const novoArtista = await Artist.create({ nome, username, senha, slug, aprovado: false });
+        const novoArtista = await Artist.create({ nome, username, senha, email, slug, aprovado: false });
         await lerDadosPorArtista(novoArtista._id);
 
         res.status(201).json({ 
@@ -217,7 +244,7 @@ app.post('/api/login', async (req, res) => {
 });
 
 app.get('/api/perfil', autenticarArtista, async (req, res) => {
-    res.json({ nome: req.artista.nome, username: req.artista.username, slug: req.artista.slug });
+    res.json({ nome: req.artista.nome, username: req.artista.username, slug: req.artista.slug, email: req.artista.email });
 });
 
 app.patch('/api/perfil', autenticarArtista, async (req, res) => {
