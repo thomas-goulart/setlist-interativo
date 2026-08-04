@@ -254,11 +254,15 @@
         async function carregarPainel() {
             try {
                 const [resFila, resConfig] = await Promise.all([
-                    fetch(`${API}/api/fila`),
-                    fetch(`${API}/api/config`)
+                    fetch(`${API}/api/fila`, { headers: getAuthHeader() }),
+                    fetch(`${API}/api/config`, { headers: getAuthHeader() })
                 ]);
                 
-                const fila = await resFila.json();
+                if (resFila.ok) {
+                    const fila = await resFila.json();
+                    renderizarpaineis(fila);
+                }
+
                 if (resConfig.ok) {
                     const config = await resConfig.json();
                     document.getElementById('limite-select').value = config.limite_pedidos || 'ilimitado';
@@ -271,8 +275,6 @@
                     statusShowGlobal = config.show_liberado || 'nao';
                     atualizarInterfaceStatusShow();
                 }
-
-                renderizarpaineis(fila);
             } catch (e) {
                 console.error("Erro ao carregar painel", e);
             }

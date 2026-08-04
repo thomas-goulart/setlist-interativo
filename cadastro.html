@@ -205,9 +205,13 @@
 
         async function carregarRepertorio() {
             try {
-                const res = await fetch(`${API}/api/repertorio`);
-                repertorioGlobal = await res.json();
-                renderizarLista(repertorioGlobal);
+                const res = await fetch(`${API}/api/repertorio`, {
+                    headers: getAuthHeader()
+                });
+                if (res.ok) {
+                    repertorioGlobal = await res.json();
+                    renderizarLista(repertorioGlobal);
+                }
             } catch (e) {
                 console.error("Erro ao carregar repertório", e);
             }
