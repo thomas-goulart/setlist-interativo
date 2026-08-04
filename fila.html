@@ -21,7 +21,11 @@
         .login-grupo input:focus { border-color: #1db954; }
         .btn-entrar { background: #1db954; color: #000; width: 100%; padding: 12px; font-weight: bold; border-radius: 6px; border: none; cursor: pointer; font-size: 1rem; margin-top: 10px; }
         .btn-entrar:hover { background: #1ed760; }
-        #erro-login { color: #e74c3c; font-size: 0.85rem; text-align: center; margin-top: 10px; display: none; }
+        #erro-login, #erro-signup { color: #e74c3c; font-size: 0.85rem; text-align: center; margin-top: 10px; display: none; }
+        #sucesso-signup { color: #27ae60; font-size: 0.85rem; text-align: center; margin-top: 10px; display: none; }
+        .toggle-link { text-align: center; margin-top: 15px; font-size: 0.85rem; color: #aaa; }
+        .toggle-link a { color: #1db954; text-decoration: none; cursor: pointer; }
+        .toggle-link a:hover { text-decoration: underline; }
 
         #painel-admin { display: none; }
 
@@ -54,7 +58,7 @@
         .btn-bloquear { background: #c0392b; color: #fff; padding: 12px 20px; font-size: 1rem; border-radius: 6px; }
         .btn-bloquear:hover { background: #e74c3c; }
 
-        .subtitulo-grupo { display: flex; flexDirection: column; gap: 10px; }
+        .subtitulo-grupo { display: flex; flex-direction: column; gap: 10px; }
         .subtitulo-grupo textarea, .subtitulo-grupo input { width: 100%; padding: 12px; background: #2a2a2a; color: #fff; border: 1px solid #444; border-radius: 6px; box-sizing: border-box; font-size: 1rem; outline: none; }
         .subtitulo-grupo textarea { height: 80px; resize: vertical; }
         .subtitulo-grupo input:focus, .subtitulo-grupo textarea:focus { border-color: #1db954; }
@@ -71,18 +75,48 @@
     <div class="container">
         <div id="tela-login">
             <div class="login-card">
-                <h1>Painel do Artista</h1>
-                <p style="text-align: center; color: #888; font-size: 0.9rem; margin-bottom: 20px;">Faça login para gerenciar o show</p>
-                <div class="login-grupo">
-                    <label for="usuario-input">Usuário</label>
-                    <input type="text" id="usuario-input" placeholder="Digite seu usuário">
+                <!-- FORMULÁRIO DE LOGIN -->
+                <div id="form-login-wrapper">
+                    <h1>Painel do Artista</h1>
+                    <p style="text-align: center; color: #888; font-size: 0.9rem; margin-bottom: 20px;">Faça login para gerenciar o show</p>
+                    <div class="login-grupo">
+                        <label for="usuario-input">Usuário</label>
+                        <input type="text" id="usuario-input" placeholder="Digite seu usuário">
+                    </div>
+                    <div class="login-grupo">
+                        <label for="senha-input">Senha</label>
+                        <input type="password" id="senha-input" placeholder="Digite sua senha">
+                    </div>
+                    <button class="btn-entrar" onclick="fazerLogin()">Entrar</button>
+                    <div id="erro-login">Usuário ou senha incorretos.</div>
+                    <div class="toggle-link">
+                        Não tem uma conta? <a onclick="alternarTelaAuth('signup')">Criar agora</a>
+                    </div>
                 </div>
-                <div class="login-grupo">
-                    <label for="senha-input">Senha</label>
-                    <input type="password" id="senha-input" placeholder="Digite sua senha">
+
+                <!-- FORMULÁRIO DE CADASTRO (SIGNUP) -->
+                <div id="form-signup-wrapper" style="display: none;">
+                    <h1>Criar Conta</h1>
+                    <p style="text-align: center; color: #888; font-size: 0.9rem; margin-bottom: 20px;">Cadastre seu artista / banda</p>
+                    <div class="login-grupo">
+                        <label for="signup-nome">Nome do Artista / Show</label>
+                        <input type="text" id="signup-nome" placeholder="Ex: Banda Rock In Rio">
+                    </div>
+                    <div class="login-grupo">
+                        <label for="signup-usuario">Usuário</label>
+                        <input type="text" id="signup-usuario" placeholder="Escolha um usuário">
+                    </div>
+                    <div class="login-grupo">
+                        <label for="signup-senha">Senha</label>
+                        <input type="password" id="signup-senha" placeholder="Escolha uma senha">
+                    </div>
+                    <button class="btn-entrar" onclick="fazerSignup()">Cadastrar</button>
+                    <div id="erro-signup">Erro ao cadastrar.</div>
+                    <div id="sucesso-signup">Conta criada com sucesso! Redirecionando...</div>
+                    <div class="toggle-link">
+                        Já tem uma conta? <a onclick="alternarTelaAuth('login')">Fazer login</a>
+                    </div>
                 </div>
-                <button class="btn-entrar" onclick="fazerLogin()">Entrar</button>
-                <div id="erro-login">Usuário ou senha incorretos.</div>
             </div>
         </div>
 
@@ -196,6 +230,22 @@
             };
         }
 
+        function alternarTelaAuth(tipo) {
+            const loginWrap = document.getElementById('form-login-wrapper');
+            const signupWrap = document.getElementById('form-signup-wrapper');
+            document.getElementById('erro-login').style.display = 'none';
+            document.getElementById('erro-signup').style.display = 'none';
+            document.getElementById('sucesso-signup').style.display = 'none';
+
+            if (tipo === 'signup') {
+                loginWrap.style.display = 'none';
+                signupWrap.style.display = 'block';
+            } else {
+                signupWrap.style.display = 'none';
+                loginWrap.style.display = 'block';
+            }
+        }
+
         async function fazerLogin() {
             const usuario = document.getElementById('usuario-input').value;
             const senha = document.getElementById('senha-input').value;
@@ -219,6 +269,48 @@
                     document.getElementById('painel-admin').style.display = 'block';
                     carregarPainel();
                 } else {
+                    erroDiv.style.display = 'block';
+                }
+            } catch (e) {
+                erroDiv.textContent = 'Erro de conexão com o servidor.';
+                erroDiv.style.display = 'block';
+            }
+        }
+
+        async function fazerSignup() {
+            const nome = document.getElementById('signup-nome').value.trim();
+            const username = document.getElementById('signup-usuario').value.trim();
+            const senha = document.getElementById('signup-senha').value.trim();
+            const erroDiv = document.getElementById('erro-signup');
+            const sucessoDiv = document.getElementById('sucesso-signup');
+
+            erroDiv.style.display = 'none';
+            sucessoDiv.style.display = 'none';
+
+            if (!nome || !username || !senha) {
+                erroDiv.textContent = 'Preencha todos os campos.';
+                erroDiv.style.display = 'block';
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API}/api/signup`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nome, username, senha })
+                });
+
+                const data = await res.json();
+                if (res.ok) {
+                    sucessoDiv.style.display = 'block';
+                    setTimeout(() => {
+                        document.getElementById('usuario-input').value = username;
+                        document.getElementById('senha-input').value = senha;
+                        alternarTelaAuth('login');
+                        fazerLogin();
+                    }, 1200);
+                } else {
+                    erroDiv.textContent = data.erro || 'Erro ao criar conta.';
                     erroDiv.style.display = 'block';
                 }
             } catch (e) {
