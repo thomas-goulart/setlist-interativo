@@ -110,7 +110,7 @@
         </div>
 
         <div class="rodape-discreto">
-            <a href="fila.html">Painel do Artista</a>
+            <a href="fila.html" id="link-painel-artista">Painel do Artista</a>
         </div>
     </div>
 
@@ -591,6 +591,14 @@
                 carregarDados();
             } catch (e) {
                 alert('Erro ao atualizar a fila.');
+            }
+        }
+
+        // Ajusta o link do rodapé para manter o contexto do slug do artista
+        if (SLUG_ARTISTA) {
+            const linkPainel = document.getElementById('link-painel-artista');
+            if (linkPainel) {
+                linkPainel.href = `../fila.html?artista=${SLUG_ARTISTA}`;
             }
         }
 
