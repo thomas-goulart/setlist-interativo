@@ -102,7 +102,56 @@ async function autenticarArtista(req, res, next) {
     }
 }
 
-// Rota de Cadastro de Novos Artistas (Criados como não aprovados por padrão)
+function autenticarSuperAdmin(req, res, next) {
+    const authHeader = req.headers['authorization'];
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ erro: 'Acesso negado.' });
+    }
+    const token = authHeader.split(' ')[1];
+    const credentials = Buffer.from('thomas:Thom@s399!', 'utf8').toString('base64');
+    if (token === 'Thom@s399!' || token === credentials) {
+        next();
+    } else {
+        res.status(401).json({ erro: 'Credenciais de admin incorretas.' });
+    }
+}
+
+// Rotas de Super Admin
+app.get('/api/admin/artistas', autenticarSuperAdmin, async (req, res) => {
+    try {
+        const artistas = await Artist.find({}, { senha: 0 });
+        res.json(artistas);
+    } catch (e) {
+        res.status(500).json({ erro: 'Erro ao listar artistas.' });
+    }
+});
+
+app.patch('/api/admin/artistas/:id/aprovar', autenticarSuperAdmin, async (req, res) => {
+    try {
+        const { aprovado } = req.body;
+        const artista = await Artist.findById(req.params.id);
+        if (!artista) return res.status(404).json({ erro: 'Artista não encontrado.' });
+        
+        artista.aprovado = aprovado;
+        await artista.save();
+        res.json({ sucesso: true, artista });
+    } catch (e) {
+        res.status(500).json({ erro: 'Erro ao atualizar status.' });
+    }
+});
+
+app.delete('/api/admin/artistas/:id', autenticarSuperAdmin, async (req, res) => {
+    try {
+        const artistaId = req.params.id;
+        await Artist.findByIdAndDelete(artistaId);
+        await ArtistData.findOneAndDelete({ artista_id: artistaId });
+        res.json({ sucesso: true, mensagem: 'Artista e dados excluídos com sucesso.' });
+    } catch (e) {
+        res.status(500).json({ erro: 'Erro ao excluir artista.' });
+    }
+});
+
+// Rota de Cadastro de Novos Artistas
 app.post('/api/signup', async (req, res) => {
     try {
         const { nome, username, senha } = req.body;
@@ -133,7 +182,7 @@ app.post('/api/signup', async (req, res) => {
 
         res.status(201).json({ 
             sucesso: true, 
-            mensagem: 'Conta criada com sucesso! Aguarde a aprovação para acessar.', 
+            mensagem: 'Conta criada com sucesso! Aguarde a aprovação.', 
             slug: novoArtista.slug,
             nome: novoArtista.nome 
         });

@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel Super Admin - Gerenciamento de Artistas</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #121212; color: #fff; margin: 0; padding: 20px; }
+        h1, h2 { color: #1db954; text-align: center; }
+        .container { max-width: 900px; margin: 0 auto; }
+        
+        #tela-login-admin { display: flex; justify-content: center; align-items: center; min-height: 80vh; }
+        .login-card { background: #1e1e1e; padding: 30px; border-radius: 8px; border: 1px solid #333; width: 100%; max-width: 400px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        .login-grupo { margin-bottom: 15px; }
+        .login-grupo label { display: block; margin-bottom: 5px; color: #aaa; font-size: 0.9rem; }
+        .login-grupo input { width: 100%; padding: 12px; background: #2a2a2a; color: #fff; border: 1px solid #444; border-radius: 6px; box-sizing: border-box; outline: none; }
+        .login-grupo input:focus { border-color: #1db954; }
+        .btn-entrar { background: #1db954; color: #000; width: 100%; padding: 12px; font-weight: bold; border-radius: 6px; border: none; cursor: pointer; font-size: 1rem; margin-top: 10px; }
+        .btn-entrar:hover { background: #1ed760; }
+        #erro-login { color: #e74c3c; font-size: 0.85rem; text-align: center; margin-top: 10px; display: none; }
+
+        #painel-super-admin { display: none; }
+        .secao-bloco { background: #1e1e1e; padding: 20px; border-radius: 8px; margin-bottom: 25px; border: 1px solid #333; }
+        
+        .artista-card { background: #2a2a2a; padding: 15px; margin-bottom: 10px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        
+        button { border: none; padding: 8px 12px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 0.85rem; }
+        .btn-aprovar { background: #27ae60; color: #fff; }
+        .btn-aprovar:hover { background: #2ecc71; }
+        .btn-bloquear { background: #e67e22; color: #fff; }
+        .btn-bloquear:hover { background: #d35400; }
+        .btn-excluir { background: #c0392b; color: #fff; }
+        .btn-excluir:hover { background: #e74c3c; }
+        
+        .badge-status { padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; }
+        .badge-status.aprovado { background: #27ae60; color: #fff; }
+        .badge-status.pendente { background: #e67e22; color: #fff; }
+        
+        .topo-painel { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .btn-sair { background: #333; color: #ff5555; border: 1px solid #444; padding: 6px 14px; font-size: 0.8rem; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .btn-sair:hover { background: #444; border-color: #ff5555; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- TELA DE LOGIN SUPER ADMIN -->
+        <div id="tela-login-admin">
+            <div class="login-card">
+                <h1>Super Admin</h1>
+                <p style="text-align: center; color: #888; font-size: 0.9rem; margin-bottom: 20px;">Acesso restrito ao gestor</p>
+                <div class="login-grupo">
+                    <label for="admin-senha">Senha de Administrador</label>
+                    <input type="password" id="admin-senha" placeholder="Digite a senha admin">
+                </div>
+                <button class="btn-entrar" onclick="fazerLoginAdmin()">Entrar</button>
+                <div id="erro-login">Senha incorreta.</div>
+            </div>
+        </div>
+
+        <!-- PAINEL SUPER ADMIN -->
+        <div id="painel-super-admin">
+            <div class="topo-painel">
+                <a href="fila.html" style="color: #aaa; text-decoration: none; font-size: 0.85rem;">⬅ Voltar para o Painel</a>
+                <button class="btn-sair" onclick="sairAdmin()">Sair</button>
+            </div>
+            
+            <h1>Gerenciamento de Artistas</h1>
+
+            <div class="secao-bloco">
+                <h2>Artistas Cadastrados</h2>
+                <div id="lista-artistas">Carregando artistas...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API = "https://setlist-interativo-api.onrender.com";
+
+        window.onload = function() {
+            const tokenAdmin = sessionStorage.getItem('token_super_admin');
+            if (tokenAdmin) {
+                document.getElementById('tela-login-admin').style.display = 'none';
+                document.getElementById('painel-super-admin').style.display = 'block';
+                carregarArtistas();
+            }
+        };
+
+        function fazerLoginAdmin() {
+            const senha = document.getElementById('admin-senha').value;
+            // Senha padrão de super admin para testes/uso interno (pode ajustar se necessário)
+            if (senha === "admin123") {
+                sessionStorage.setItem('token_super_admin', senha);
+                document.getElementById('tela-login-admin').style.display = 'none';
+                document.getElementById('painel-super-admin').style.display = 'block';
+                carregarArtistas();
+            } else {
+                document.getElementById('erro-login').style.display = 'block';
+            }
+        }
+
+        function sairAdmin() {
+            sessionStorage.removeItem('token_super_admin');
+            document.getElementById('painel-super-admin').style.display = 'none';
+            document.getElementById('tela-login-admin').style.display = 'flex';
+            document.getElementById('admin-senha').value = '';
+        }
+
+        async function carregarArtistas() {
+            try {
+                const res = await fetch(`${API}/api/admin/artistas`, {
+                    headers: { 'Authorization': `Bearer ${sessionStorage.getItem('token_super_admin')}` }
+                });
+                if (res.ok) {
+                    const artistas = await res.json();
+                    renderizarArtistas(artistas);
+                } else {
+                    document.getElementById('lista-artistas').innerHTML = '<p style="color:#e74c3c; text-align:center;">Erro ao carregar lista.</p>';
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function renderizarArtistas(artistas) {
+            const container = document.getElementById('lista-artistas');
+            container.innerHTML = '';
+
+            if (artistas.length === 0) {
+                container.innerHTML = '<p style="color:#777; text-align:center;">Nenhum artista cadastrado.</p>';
+                return;
+            }
+
+            artistas.forEach(art => {
+                const div = document.createElement('div');
+                div.className = 'artista-card';
+                div.innerHTML = `
+                    <div>
+                        <strong style="font-size: 1.05rem;">${art.nome}</strong> 
+                        <span class="badge-status ${art.aprovado ? 'aprovado' : 'pendente'}">${art.aprovado ? 'Aprovado' : 'Pendente'}</span><br>
+                        <span style="color:#aaa; font-size: 0.85rem;">Usuário: ${art.username} | Slug: /show/${art.slug}</span>
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="${art.aprovado ? 'btn-bloquear' : 'btn-aprovar'}" onclick="alternarAprovacao('${art._id}', ${!art.aprovado})">
+                            ${art.aprovado ? 'Bloquear' : 'Aprovar'}
+                        </button>
+                        <button class="btn-excluir" onclick="excluirArtista('${art._id}')">Excluir</button>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        async function alternarAprovacao(id, novoStatus) {
+            try {
+                const res = await fetch(`${API}/api/admin/artistas/${id}/aprovar`, {
+                    method: 'PATCH',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${sessionStorage.getItem('token_super_admin')}`
+                    },
+                    body: JSON.stringify({ aprovado: novoStatus })
+                });
+                if (res.ok) {
+                    carregarArtistas();
+                } else {
+                    alert('Erro ao atualizar status.');
+                }
+            } catch (e) {
+                alert('Erro de conexão.');
+            }
+        }
+
+        async function excluirArtista(id) {
+            if (!confirm('Deseja realmente excluir este artista e todos os seus dados?')) return;
+            try {
+                const res = await fetch(`${API}/api/admin/artistas/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${sessionStorage.getItem('token_super_admin')}` }
+                });
+                if (res.ok) {
+                    carregarArtistas();
+                } else {
+                    alert('Erro ao excluir artista.');
+                }
+            } catch (e) {
+                alert('Erro de conexão.');
+            }
+        }
+    </script>
+</body>
+</html>
