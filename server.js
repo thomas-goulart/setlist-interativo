@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -15,14 +15,8 @@ mongoose.connect(MONGO_URL)
     .then(() => console.log('Conectado ao MongoDB Atlas com sucesso!'))
     .catch(err => console.error('Erro ao conectar ao MongoDB:', err));
 
-// Configuração do Transporter de E-mail (Substitua pelos seus dados ou variáveis de ambiente)
-const transporter = nodemailer.createTransport({
-    service: 'gmail', // Ou outro provedor SMTP
-    auth: {
-        user: process.env.EMAIL_USER || 'seu-email@gmail.com',
-        pass: process.env.EMAIL_PASS || 'sua-senha-de-app'
-    }
-});
+// Inicialização do Resend via API HTTP (Porta 443 - Funciona perfeitamente no Render)
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 const configSchema = new mongoose.Schema({
     limite_pedidos: { type: String, default: 'ilimitado' },
@@ -147,17 +141,17 @@ app.patch('/api/admin/artistas/:id/aprovar', autenticarSuperAdmin, async (req, r
         artista.aprovado = aprovado;
         await artista.save();
 
-        // Se a conta foi aprovada agora, envia o e-mail de confirmação
+        // Se a conta foi aprovada agora, dispara o e-mail via Resend
         if (!statusAnterior && aprovado === true && artista.email) {
             try {
-                await transporter.sendMail({
-                    from: '"Setlist Interativo" <no-reply@setlist.com>',
+                await resend.emails.send({
+                    from: 'Setlist Interativo <onboarding@resend.dev>', // No Resend, você pode usar onboarding@resend.dev para testes iniciais
                     to: artista.email,
                     subject: 'Sua conta foi aprovada! 🎸',
                     text: `Olá ${artista.nome},\n\nSua conta no Setlist Interativo foi aprovada pelo administrador com sucesso! Você já pode fazer login e gerenciar os seus shows.\n\nAcesse o painel e divirta-se!`
                 });
             } catch (mailErr) {
-                console.error('Erro ao enviar e-mail de aprovação:', mailErr);
+                console.error('Erro ao enviar e-mail de aprovação via Resend:', mailErr);
             }
         }
 
