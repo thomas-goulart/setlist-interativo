@@ -15,7 +15,6 @@ mongoose.connect(MONGO_URL)
     .then(() => console.log('Conectado ao MongoDB Atlas com sucesso!'))
     .catch(err => console.error('Erro ao conectar ao MongoDB:', err));
 
-// Inicialização do Resend via API HTTP (Porta 443 - Funciona perfeitamente no Render)
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 const configSchema = new mongoose.Schema({
@@ -121,7 +120,6 @@ function autenticarSuperAdmin(req, res, next) {
     }
 }
 
-// Rotas de Super Admin
 app.get('/api/admin/artistas', autenticarSuperAdmin, async (req, res) => {
     try {
         const artistas = await Artist.find({}, { senha: 0 });
@@ -141,11 +139,10 @@ app.patch('/api/admin/artistas/:id/aprovar', autenticarSuperAdmin, async (req, r
         artista.aprovado = aprovado;
         await artista.save();
 
-        // Se a conta foi aprovada agora, dispara o e-mail via Resend
         if (!statusAnterior && aprovado === true && artista.email) {
             try {
                 await resend.emails.send({
-                    from: 'Setlist Interativo <onboarding@resend.dev>', // No Resend, você pode usar onboarding@resend.dev para testes iniciais
+                    from: 'Setlist Interativo <setlistinterativo@setlistinterativo.com.br>',
                     to: artista.email,
                     subject: 'Sua conta foi aprovada! 🎸',
                     text: `Olá ${artista.nome},\n\nSua conta no Setlist Interativo foi aprovada pelo administrador com sucesso! Você já pode fazer login e gerenciar os seus shows.\n\nAcesse o painel e divirta-se!`
@@ -172,7 +169,6 @@ app.delete('/api/admin/artistas/:id', autenticarSuperAdmin, async (req, res) => 
     }
 });
 
-// Rota de Cadastro de Novos Artistas com E-mail
 app.post('/api/signup', async (req, res) => {
     try {
         const { nome, username, senha, email } = req.body;
