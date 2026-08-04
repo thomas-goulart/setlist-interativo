@@ -42,7 +42,8 @@ const artistSchema = new mongoose.Schema({
     nome: { type: String, required: true },
     username: { type: String, required: true, unique: true },
     senha: { type: String, required: true },
-    slug: { type: String, required: true, unique: true }
+    slug: { type: String, required: true, unique: true },
+    aprovado: { type: Boolean, default: false }
 });
 const Artist = mongoose.model('Artist', artistSchema);
 
@@ -89,6 +90,10 @@ async function autenticarArtista(req, res, next) {
         if (!artista) {
             return res.status(401).json({ erro: 'Credenciais inválidas.' });
         }
+
+        if (artista.aprovado === false) {
+            return res.status(403).json({ erro: 'Sua conta aguarda aprovação do administrador.' });
+        }
         
         req.artista = artista;
         next();
@@ -97,7 +102,7 @@ async function autenticarArtista(req, res, next) {
     }
 }
 
-// Rota de Cadastro de Novos Artistas
+// Rota de Cadastro de Novos Artistas (Criados como não aprovados por padrão)
 app.post('/api/signup', async (req, res) => {
     try {
         const { nome, username, senha } = req.body;
@@ -123,12 +128,12 @@ app.post('/api/signup', async (req, res) => {
             contador++;
         }
 
-        const novoArtista = await Artist.create({ nome, username, senha, slug });
+        const novoArtista = await Artist.create({ nome, username, senha, slug, aprovado: false });
         await lerDadosPorArtista(novoArtista._id);
 
         res.status(201).json({ 
             sucesso: true, 
-            mensagem: 'Artista cadastrado com sucesso!', 
+            mensagem: 'Conta criada com sucesso! Aguarde a aprovação para acessar.', 
             slug: novoArtista.slug,
             nome: novoArtista.nome 
         });
@@ -151,6 +156,10 @@ app.post('/api/login', async (req, res) => {
         if (!artista) {
             return res.status(401).json({ erro: 'Credenciais inválidas.' });
         }
+
+        if (artista.aprovado === false) {
+            return res.status(403).json({ erro: 'Sua conta aguarda aprovação do administrador.' });
+        }
         
         res.json({ sucesso: true, mensagem: 'Autenticado com sucesso!', slug: artista.slug, nome: artista.nome });
     } catch (e) {
@@ -170,25 +179,6 @@ app.patch('/api/perfil', autenticarArtista, async (req, res) => {
     req.artista.nome = nome.trim();
     await req.artista.save();
     res.json({ sucesso: true, nome: req.artista.nome });
-});
-
-app.post('/api/setup-artistas', async (req, res) => {
-    const artistasIniciais = [
-        { nome: 'Artista Um', username: 'artista1', senha: '123', slug: 'artista-1' },
-        { nome: 'Artista Dois', username: 'artista2', senha: '123', slug: 'artista-2' },
-        { nome: 'Artista Tres', username: 'artista3', senha: '123', slug: 'artista-3' },
-        { nome: 'Artista Quatro', username: 'artista4', senha: '123', slug: 'artista-4' },
-        { nome: 'Artista Cinco', username: 'artista5', senha: '123', slug: 'artista-5' }
-    ];
-
-    for (let art of artistasIniciais) {
-        let existe = await Artist.findOne({ username: art.username });
-        if (!existe) {
-            let novoArt = await Artist.create(art);
-            await lerDadosPorArtista(novoArt._id);
-        }
-    }
-    res.json({ sucesso: true, mensagem: 'Artistas de teste configurados com sucesso!' });
 });
 
 app.get('/api/config', autenticarArtista, async (req, res) => {
