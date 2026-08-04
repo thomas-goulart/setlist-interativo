@@ -87,8 +87,7 @@
 
         function fazerLoginAdmin() {
             const senha = document.getElementById('admin-senha').value;
-            // Senha padrão de super admin para testes/uso interno (pode ajustar se necessário)
-            if (senha === "admin123") {
+            if (senha === "Thom@s399!") {
                 sessionStorage.setItem('token_super_admin', senha);
                 document.getElementById('tela-login-admin').style.display = 'none';
                 document.getElementById('painel-super-admin').style.display = 'block';
