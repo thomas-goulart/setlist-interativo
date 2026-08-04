@@ -97,6 +97,49 @@ async function autenticarArtista(req, res, next) {
     }
 }
 
+// Rota de Cadastro de Novos Artistas
+app.post('/api/signup', async (req, res) => {
+    try {
+        const { nome, username, senha } = req.body;
+        if (!nome || !username || !senha) {
+            return res.status(400).json({ erro: 'Nome, usuário e senha são obrigatórios.' });
+        }
+
+        const usernameExistente = await Artist.findOne({ username });
+        if (usernameExistente) {
+            return res.status(400).json({ erro: 'Este nome de usuário já está em uso.' });
+        }
+
+        // Gera um slug amigável baseado no nome (ex: "Banda Rock" vira "banda-rock")
+        let slugBase = nome.toLowerCase()
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, "")
+            .replace(/[^a-z0-9]/g, '-')
+            .replace(/-+/g, '-')
+            .replace(/^-|-$/g, '');
+
+        let slug = slugBase;
+        let contador = 1;
+        while (await Artist.findOne({ slug })) {
+            slug = `${slugBase}-${contador}`;
+            contador++;
+        }
+
+        const novoArtista = await Artist.create({ nome, username, senha, slug });
+        
+        // Inicializa os dados vazios do artista no banco
+        await lerDadosPorArtista(novoArtista._id);
+
+        res.status(201).json({ 
+            sucesso: true, 
+            mensagem: 'Artista cadastrado com sucesso!', 
+            slug: novoArtista.slug,
+            nome: novoArtista.nome 
+        });
+    } catch (e) {
+        res.status(500).json({ erro: 'Erro ao cadastrar artista: ' + e.message });
+    }
+});
+
 app.post('/api/login', async (req, res) => {
     const authHeader = req.headers['authorization'];
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -130,7 +173,8 @@ app.post('/api/setup-artistas', async (req, res) => {
     for (let art of artistasIniciais) {
         let existe = await Artist.findOne({ username: art.username });
         if (!existe) {
-            await Artist.create(art);
+            let novoArt = await Artist.create(art);
+            await lerDadosPorArtista(novoArt._id);
         }
     }
     res.json({ sucesso: true, mensagem: 'Artistas de teste configurados com sucesso!' });
