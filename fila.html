@@ -54,9 +54,10 @@
         .btn-bloquear { background: #c0392b; color: #fff; padding: 12px 20px; font-size: 1rem; border-radius: 6px; }
         .btn-bloquear:hover { background: #e74c3c; }
 
-        .subtitulo-grupo { display: flex; flex-direction: column; gap: 10px; }
-        .subtitulo-grupo textarea { width: 100%; height: 80px; padding: 12px; background: #2a2a2a; color: #fff; border: 1px solid #444; border-radius: 6px; box-sizing: border-box; font-size: 1rem; outline: none; resize: vertical; }
-        .subtitulo-grupo textarea:focus { border-color: #1db954; }
+        .subtitulo-grupo { display: flex; flexDirection: column; gap: 10px; }
+        .subtitulo-grupo textarea, .subtitulo-grupo input { width: 100%; padding: 12px; background: #2a2a2a; color: #fff; border: 1px solid #444; border-radius: 6px; box-sizing: border-box; font-size: 1rem; outline: none; }
+        .subtitulo-grupo textarea { height: 80px; resize: vertical; }
+        .subtitulo-grupo input:focus, .subtitulo-grupo textarea:focus { border-color: #1db954; }
 
         .secao-reset { text-align: center; margin-top: 30px; padding: 15px; border-top: 1px solid #333; }
         .btn-reset { background: #c0392b; color: #fff; padding: 10px 20px; font-size: 0.9rem; border-radius: 5px; }
@@ -123,6 +124,16 @@
                         </div>
                         <div id="botao-status-container">
                             <button class="btn-liberar" onclick="alternarLiberacaoShow('sim')">Liberar Show para o Público</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="secao-bloco">
+                    <h2>🏷️ Nome do Artista / Show (Título do Público)</h2>
+                    <div class="subtitulo-grupo">
+                        <input type="text" id="input-nome-artista" placeholder="Digite o nome do artista ou show...">
+                        <div style="text-align: right;">
+                            <button class="btn-salvar" onclick="salvarNomeArtista()">Salvar Nome</button>
                         </div>
                     </div>
                 </div>
@@ -253,9 +264,10 @@
 
         async function carregarPainel() {
             try {
-                const [resFila, resConfig] = await Promise.all([
+                const [resFila, resConfig, resPerfil] = await Promise.all([
                     fetch(`${API}/api/fila`, { headers: getAuthHeader() }),
-                    fetch(`${API}/api/config`, { headers: getAuthHeader() })
+                    fetch(`${API}/api/config`, { headers: getAuthHeader() }),
+                    fetch(`${API}/api/perfil`, { headers: getAuthHeader() })
                 ]);
                 
                 if (resFila.ok) {
@@ -274,6 +286,14 @@
 
                     statusShowGlobal = config.show_liberado || 'nao';
                     atualizarInterfaceStatusShow();
+                }
+
+                if (resPerfil.ok) {
+                    const perfil = await resPerfil.json();
+                    const inputNome = document.getElementById('input-nome-artista');
+                    if (document.activeElement !== inputNome) {
+                        inputNome.value = perfil.nome || '';
+                    }
                 }
             } catch (e) {
                 console.error("Erro ao carregar painel", e);
@@ -308,6 +328,28 @@
                     alert(novoStatus === 'sim' ? 'Show liberado para o público com sucesso!' : 'Acesso bloqueado com sucesso!');
                 } else {
                     alert('Erro ao atualizar status do show.');
+                }
+            } catch (e) {
+                alert('Erro de conexão com o servidor.');
+            }
+        }
+
+        async function salvarNomeArtista() {
+            const nome = document.getElementById('input-nome-artista').value.trim();
+            if (!nome) {
+                alert('O nome do artista não pode ficar vazio.');
+                return;
+            }
+            try {
+                const res = await fetch(`${API}/api/perfil`, {
+                    method: 'PATCH',
+                    headers: getAuthHeader(),
+                    body: JSON.stringify({ nome })
+                });
+                if (res.ok) {
+                    alert('Nome do artista atualizado com sucesso!');
+                } else {
+                    alert('Erro ao atualizar nome.');
                 }
             } catch (e) {
                 alert('Erro de conexão com o servidor.');

@@ -110,7 +110,6 @@ app.post('/api/signup', async (req, res) => {
             return res.status(400).json({ erro: 'Este nome de usuário já está em uso.' });
         }
 
-        // Gera um slug amigável baseado no nome (ex: "Banda Rock" vira "banda-rock")
         let slugBase = nome.toLowerCase()
             .normalize('NFD').replace(/[\u0300-\u036f]/g, "")
             .replace(/[^a-z0-9]/g, '-')
@@ -125,8 +124,6 @@ app.post('/api/signup', async (req, res) => {
         }
 
         const novoArtista = await Artist.create({ nome, username, senha, slug });
-        
-        // Inicializa os dados vazios do artista no banco
         await lerDadosPorArtista(novoArtista._id);
 
         res.status(201).json({ 
@@ -159,6 +156,20 @@ app.post('/api/login', async (req, res) => {
     } catch (e) {
         res.status(401).json({ erro: 'Token inválido.' });
     }
+});
+
+app.get('/api/perfil', autenticarArtista, async (req, res) => {
+    res.json({ nome: req.artista.nome, username: req.artista.username, slug: req.artista.slug });
+});
+
+app.patch('/api/perfil', autenticarArtista, async (req, res) => {
+    const { nome } = req.body;
+    if (!nome) {
+        return res.status(400).json({ erro: 'O nome é obrigatório.' });
+    }
+    req.artista.nome = nome.trim();
+    await req.artista.save();
+    res.json({ sucesso: true, nome: req.artista.nome });
 });
 
 app.post('/api/setup-artistas', async (req, res) => {
