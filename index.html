@@ -77,7 +77,7 @@
         </div>
 
         <div id="conteudo-liberado" style="display: none;">
-            <h1>🎸 Setlist Interativo</h1>
+            <h1 id="titulo-artista-header">🎸 Setlist Interativo</h1>
             <div id="subtitulo-view" class="subtitulo-publico"></div>
 
             <div id="aviso-limite-pedidos" class="info-limite"></div>
@@ -146,6 +146,22 @@
 
     <script>
         const API = "https://setlist-interativo-api.onrender.com";
+
+        function obterSlugDaUrl() {
+            const partes = window.location.pathname.split('/');
+            const indexShow = partes.indexOf('show');
+            if (indexShow !== -1 && partes[indexShow + 1]) {
+                return partes[indexShow + 1];
+            }
+            return null;
+        }
+
+        const SLUG_ARTISTA = obterSlugDaUrl();
+
+        if (!SLUG_ARTISTA) {
+            document.body.innerHTML = '<div style="color: #fff; text-align: center; margin-top: 50px; font-family: Arial;"><h2>Artista não especificado na URL.</h2><p>Acesse o link correto do show (ex: /show/artista-1)</p></div>';
+        }
+
         let repertorioGeral = [];
         let filaGeral = [];
         let configGlobal = { limite_pedidos: 'ilimitado', subtitulo: '', show_liberado: 'nao', event_id: '' };
@@ -154,17 +170,17 @@
 
         function gerenciarSessaoEvento(event_idServidor) {
             if (!event_idServidor) return;
-            const eventIdSalvo = localStorage.getItem('current_event_id');
+            const eventIdSalvo = localStorage.getItem('current_event_id_' + SLUG_ARTISTA);
             if (eventIdSalvo !== event_idServidor) {
                 const chavesParaRemover = [];
                 for (let i = 0; i < localStorage.length; i++) {
                     const chave = localStorage.key(i);
-                    if (chave && (chave.startsWith("meu_pedido_") || chave.startsWith("ja_votou_"))) {
+                    if (chave && (chave.startsWith("meu_pedido_" + SLUG_ARTISTA + "_") || chave.startsWith("ja_votou_" + SLUG_ARTISTA + "_"))) {
                         chavesParaRemover.push(chave);
                     }
                 }
                 chavesParaRemover.forEach(c => localStorage.removeItem(c));
-                localStorage.setItem('current_event_id', event_idServidor);
+                localStorage.setItem('current_event_id_' + SLUG_ARTISTA, event_idServidor);
             }
         }
 
@@ -172,8 +188,9 @@
             const chavesParaRemover = [];
             for (let i = 0; i < localStorage.length; i++) {
                 const chave = localStorage.key(i);
-                if (chave && (chave.startsWith("meu_pedido_") || chave.startsWith("ja_votou_"))) {
-                    const partes = chave.replace("meu_pedido_", "").replace("ja_votou_", "");
+                if (chave && (chave.startsWith("meu_pedido_" + SLUG_ARTISTA + "_") || chave.startsWith("ja_votou_" + SLUG_ARTISTA + "_"))) {
+                    const prefixo = chave.startsWith("meu_pedido_") ? "meu_pedido_" + SLUG_ARTISTA + "_" : "ja_votou_" + SLUG_ARTISTA + "_";
+                    const partes = chave.replace(prefixo, "");
                     const existeNaFila = filaAtual.some(f => `${f.titulo}_${f.artista}` === partes);
                     if (!existeNaFila) {
                         chavesParaRemover.push(chave);
@@ -194,10 +211,14 @@
         }
 
         async function carregarDados() {
+            if (!SLUG_ARTISTA) return;
             try {
-                const resConfig = await fetch(`${API}/api/config`);
+                const resConfig = await fetch(`${API}/api/show/${SLUG_ARTISTA}/config`);
                 if (resConfig.ok) {
                     configGlobal = await resConfig.json();
+                    if (configGlobal.nome) {
+                        document.getElementById('titulo-artista-header').textContent = `🎸 ${configGlobal.nome}`;
+                    }
                     gerenciarSessaoEvento(configGlobal.event_id);
                 }
 
@@ -214,7 +235,7 @@
                     subBloqueadoEl.style.display = 'none';
                 }
 
-                const resFilaTemp = await fetch(`${API}/api/fila`);
+                const resFilaTemp = await fetch(`${API}/api/show/${SLUG_ARTISTA}/fila`);
                 const filaTemp = await resFilaTemp.json();
                 limparChavesLocaisSeNecessario(filaTemp);
 
@@ -239,7 +260,7 @@
                     return;
                 }
 
-                const resRep = await fetch(`${API}/api/repertorio`);
+                const resRep = await fetch(`${API}/api/show/${SLUG_ARTISTA}/repertorio`);
                 repertorioGeral = await resRep.json();
                 filaGeral = filaTemp;
 
@@ -300,7 +321,7 @@
             let contador = 0;
             for (let i = 0; i < localStorage.length; i++) {
                 const chave = localStorage.key(i);
-                if (chave && chave.startsWith("meu_pedido_") && localStorage.getItem(chave) === "true") {
+                if (chave && chave.startsWith("meu_pedido_" + SLUG_ARTISTA + "_") && localStorage.getItem(chave) === "true") {
                     contador++;
                 }
             }
@@ -360,9 +381,9 @@
                 let classeCard = '';
                 let elementoAcao = '';
 
-                const chaveLocal = `meu_pedido_${m.titulo}_${m.artista}`;
+                const chaveLocal = `meu_pedido_${SLUG_ARTISTA}_${m.titulo}_${m.artista}`;
                 const souEuQuemPediu = localStorage.getItem(chaveLocal) === 'true';
-                const jaVotouLogo = localStorage.getItem(`ja_votou_${m.titulo}_${m.artista}`) === 'true';
+                const jaVotouLogo = localStorage.getItem(`ja_votou_${SLUG_ARTISTA}_${m.titulo}_${m.artista}`) === 'true';
 
                 if (pedido && (!pedido.status || pedido.status === 'pendente')) {
                     classeCard = 'pendente';
@@ -439,9 +460,9 @@
 
             dados.forEach(p => {
                 const isTocada = p.status === 'tocada';
-                const chaveLocal = `meu_pedido_${p.titulo}_${p.artista}`;
+                const chaveLocal = `meu_pedido_${SLUG_ARTISTA}_${p.titulo}_${p.artista}`;
                 const souEuQuemPediu = localStorage.getItem(chaveLocal) === 'true';
-                const jaVotouLogo = localStorage.getItem(`ja_votou_${p.titulo}_${p.artista}`) === 'true';
+                const jaVotouLogo = localStorage.getItem(`ja_votou_${SLUG_ARTISTA}_${p.titulo}_${p.artista}`) === 'true';
                 
                 let elementoAcaoHistorico = '';
                 if (!isTocada) {
@@ -522,7 +543,7 @@
 
         async function enviarRequisicaoPedido(dedicatoria) {
             try {
-                const res = await fetch(`${API}/api/fila`, {
+                const res = await fetch(`${API}/api/show/${SLUG_ARTISTA}/fila`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
@@ -538,7 +559,7 @@
                     return;
                 }
                 
-                localStorage.setItem(`meu_pedido_${musicaSelecionadaTitulo}_${musicaSelecionadaArtista}`, 'true');
+                localStorage.setItem(`meu_pedido_${SLUG_ARTISTA}_${musicaSelecionadaTitulo}_${musicaSelecionadaArtista}`, 'true');
 
                 alert(data.mensagem || 'Pedido enviado com sucesso para a fila!');
                 carregarDados();
@@ -548,14 +569,14 @@
         }
 
         async function subirNaFila(pedido_id, titulo, artista) {
-            const chaveVoto = `ja_votou_${titulo}_${artista}`;
+            const chaveVoto = `ja_votou_${SLUG_ARTISTA}_${titulo}_${artista}`;
             if (localStorage.getItem(chaveVoto) === 'true') {
                 alert('Você já pediu para ouvir logo esta música!');
                 return;
             }
 
             try {
-                const res = await fetch(`${API}/api/fila/${pedido_id}/voto`, { 
+                const res = await fetch(`${API}/api/show/${SLUG_ARTISTA}/fila/${pedido_id}/voto`, { 
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ event_id: configGlobal.event_id })
