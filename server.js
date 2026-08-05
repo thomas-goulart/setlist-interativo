@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
 const { Resend } = require('resend');
+const bcrypt = require('bcrypt');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -90,8 +91,13 @@ async function autenticarArtista(req, res, next) {
         const decoded = Buffer.from(token, 'base64').toString('utf8');
         const [username, senha] = decoded.split(':');
         
-        const artista = await Artist.findOne({ username, senha });
+        const artista = await Artist.findOne({ username });
         if (!artista) {
+            return res.status(401).json({ erro: 'Credenciais inválidas.' });
+        }
+
+        const senhaValida = await bcrypt.compare(senha, artista.senha);
+        if (!senhaValida) {
             return res.status(401).json({ erro: 'Credenciais inválidas.' });
         }
 
@@ -194,7 +200,9 @@ app.post('/api/signup', async (req, res) => {
             contador++;
         }
 
-        const novoArtista = await Artist.create({ nome, username, senha, email, slug, aprovado: false });
+        const senhaHash = await bcrypt.hash(senha, 10);
+
+        const novoArtista = await Artist.create({ nome, username, senha: senhaHash, email, slug, aprovado: false });
         await lerDadosPorArtista(novoArtista._id);
 
         res.status(201).json({ 
@@ -218,8 +226,13 @@ app.post('/api/login', async (req, res) => {
         const decoded = Buffer.from(token, 'base64').toString('utf8');
         const [username, senha] = decoded.split(':');
         
-        const artista = await Artist.findOne({ username, senha });
+        const artista = await Artist.findOne({ username });
         if (!artista) {
+            return res.status(401).json({ erro: 'Credenciais inválidas.' });
+        }
+
+        const senhaValida = await bcrypt.compare(senha, artista.senha);
+        if (!senhaValida) {
             return res.status(401).json({ erro: 'Credenciais inválidas.' });
         }
 
