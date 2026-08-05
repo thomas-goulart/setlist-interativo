@@ -12,9 +12,13 @@ app.use(express.json());
 
 const MONGO_URL = process.env.MONGO_URL;
 
-mongoose.connect(MONGO_URL)
-    .then(() => console.log('Conectado ao MongoDB Atlas com sucesso!'))
-    .catch(err => console.error('Erro ao conectar ao MongoDB:', err));
+if (MONGO_URL) {
+    mongoose.connect(MONGO_URL)
+        .then(() => console.log('Conectado ao MongoDB Atlas com sucesso!'))
+        .catch(err => console.error('Erro ao conectar ao MongoDB:', err));
+} else {
+    console.warn('Aviso: MONGO_URL não definida nas variáveis de ambiente.');
+}
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -51,7 +55,7 @@ const artistSchema = new mongoose.Schema({
     slug: { type: String, required: true, unique: true },
     aprovado: { type: Boolean, default: false }
 });
-const Artist = mongoose.model('Artist', artistSchema);
+const Artist = mongoose.models.Artist || mongoose.model('Artist', artistSchema);
 
 const artistDataSchema = new mongoose.Schema({
     artista_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Artist', required: true, unique: true },
@@ -59,7 +63,7 @@ const artistDataSchema = new mongoose.Schema({
     repertorio: [musicaSchema],
     fila: [pedidoSchema]
 });
-const ArtistData = mongoose.model('ArtistData', artistDataSchema);
+const ArtistData = mongoose.models.ArtistData || mongoose.model('ArtistData', artistDataSchema);
 
 async function lerDadosPorArtista(artistaId) {
     let dados = await ArtistData.findOne({ artista_id: artistaId });
@@ -595,6 +599,11 @@ app.patch('/api/show/:slug/fila/:id/voto', async (req, res) => {
     res.json({ sucesso: true, mensagem: 'Pedido destacado com sucesso!', pedido });
 });
 
-app.listen(PORT, () => {
-    console.log(`Servidor rodando na porta ${PORT}`);
-});
+// Essencial para o ambiente Serverless da Vercel
+if (process.env.NODE_ENV !== 'production') {
+    app.listen(PORT, () => {
+        console.log(`Servidor rodando na porta ${PORT}`);
+    });
+}
+
+module.exports = app;
