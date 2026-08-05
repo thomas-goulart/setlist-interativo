@@ -10,6 +10,9 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
+// Permite servir os arquivos estáticos da raiz
+app.use(express.static(__dirname));
+
 const MONGO_URL = process.env.MONGO_URL;
 
 if (MONGO_URL) {
@@ -135,84 +138,9 @@ function autenticarSuperAdmin(req, res, next) {
     }
 }
 
+// Retorna a página estática inicial customizada na raiz
 app.get('/', (req, res) => {
-    res.send(`
-        <!DOCTYPE html>
-        <html lang="pt-BR">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Setlist Interativo</title>
-            <style>
-                body {
-                    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-                    background-color: #0f172a;
-                    color: #f8fafc;
-                    margin: 0;
-                    padding: 0;
-                    display: flex;
-                    flex-direction: column;
-                    min-height: 100vh;
-                }
-                .container {
-                    flex: 1;
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    justify-content: center;
-                    text-align: center;
-                    padding: 2rem;
-                    max-width: 600px;
-                    margin: 0 auto;
-                }
-                h1 {
-                    font-size: 2.5rem;
-                    margin-bottom: 0.5rem;
-                    color: #38bdf8;
-                }
-                p {
-                    font-size: 1.1rem;
-                    color: #94a3b8;
-                    line-height: 1.6;
-                    margin-bottom: 1.5rem;
-                }
-                .card {
-                    background-color: #1e293b;
-                    border: 1px solid #334155;
-                    border-radius: 12px;
-                    padding: 2rem;
-                    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
-                }
-                footer {
-                    text-align: center;
-                    padding: 1.5rem;
-                    border-top: 1px solid #1e293b;
-                    color: #64748b;
-                    font-size: 0.9rem;
-                }
-                footer a {
-                    color: #38bdf8;
-                    text-decoration: none;
-                }
-                footer a:hover {
-                    text-decoration: underline;
-                }
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <div class="card">
-                    <h1>Setlist Interativo 🎸</h1>
-                    <p>A plataforma definitiva para interação entre artistas e público durante apresentações ao vivo.</p>
-                    <p><strong>É fã ou público?</strong><br>Para fazer pedidos de músicas, escaneie o <strong>QR Code</strong> correspondente ao show que você está assistindo no momento fornecido pelo artista ou pelo local do evento.</p>
-                </div>
-            </div>
-            <footer>
-                É artista? <a href="/painel" target="_blank">Acesse o painel de gerenciamento</a>
-            </footer>
-        </body>
-        </html>
-    `);
+    res.sendFile(__dirname + '/home.html');
 });
 
 app.get('/api/admin/artistas', autenticarSuperAdmin, async (req, res) => {
@@ -599,7 +527,10 @@ app.patch('/api/show/:slug/fila/:id/voto', async (req, res) => {
     res.json({ sucesso: true, mensagem: 'Pedido destacado com sucesso!', pedido });
 });
 
-// Garante abertura da porta no Render / servidores tradicionais e exporta para a Vercel
+app.get('/show/:slug', (req, res) => {
+    res.sendFile(__dirname + '/index.html');
+});
+
 app.listen(PORT, () => {
     console.log(`Servidor rodando na porta ${PORT}`);
 });
