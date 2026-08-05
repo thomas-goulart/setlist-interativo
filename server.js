@@ -599,11 +599,9 @@ app.patch('/api/show/:slug/fila/:id/voto', async (req, res) => {
     res.json({ sucesso: true, mensagem: 'Pedido destacado com sucesso!', pedido });
 });
 
-// Essencial para o ambiente Serverless da Vercel
-if (process.env.NODE_ENV !== 'production') {
-    app.listen(PORT, () => {
-        console.log(`Servidor rodando na porta ${PORT}`);
-    });
-}
+// Garante abertura da porta no Render / servidores tradicionais e exporta para a Vercel
+app.listen(PORT, () => {
+    console.log(`Servidor rodando na porta ${PORT}`);
+});
 
 module.exports = app;
