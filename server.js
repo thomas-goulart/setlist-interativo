@@ -22,7 +22,8 @@ const configSchema = new mongoose.Schema({
     limite_pedidos: { type: String, default: 'ilimitado' },
     show_liberado: { type: String, default: 'nao' },
     subtitulo: { type: String, default: '' },
-    event_id: { type: String, default: () => Date.now().toString() }
+    event_id: { type: String, default: () => Date.now().toString() },
+    acessos_show: { type: Number, default: 0 }
 });
 
 const musicaSchema = new mongoose.Schema({
@@ -65,17 +66,21 @@ async function lerDadosPorArtista(artistaId) {
     if (!dados) {
         dados = new ArtistData({
             artista_id: artistaId,
-            config: { limite_pedidos: 'ilimitado', show_liberado: 'nao', subtitulo: '', event_id: Date.now().toString() },
+            config: { limite_pedidos: 'ilimitado', show_liberado: 'nao', subtitulo: '', event_id: Date.now().toString(), acessos_show: 0 },
             repertorio: [],
             fila: []
         });
         await dados.save();
     }
     if (!dados.config) {
-        dados.config = { limite_pedidos: 'ilimitado', show_liberado: 'nao', subtitulo: '', event_id: Date.now().toString() };
+        dados.config = { limite_pedidos: 'ilimitado', show_liberado: 'nao', subtitulo: '', event_id: Date.now().toString(), acessos_show: 0 };
     }
     if (!dados.config.event_id) {
         dados.config.event_id = Date.now().toString();
+        await dados.save();
+    }
+    if (dados.config.acessos_show === undefined) {
+        dados.config.acessos_show = 0;
         await dados.save();
     }
     return dados;
@@ -285,6 +290,17 @@ app.post('/api/signup', async (req, res) => {
         const novoArtista = await Artist.create({ nome, username, senha: senhaHash, email, slug, aprovado: false });
         await lerDadosPorArtista(novoArtista._id);
 
+        try {
+            await resend.emails.send({
+                from: 'Setlist Interativo <setlistinterativo@setlistinterativo.com.br>',
+                to: email,
+                subject: 'Cadastro recebido - Setlist Interativo 🎸',
+                text: `Olá ${nome},\n\nRecebemos o seu cadastro no Setlist Interativo! Sua conta está aguardando a aprovação do administrador.\n\nAssim que for aprovada, você receberá um novo e-mail para começar a gerenciar seus shows.`
+            });
+        } catch (mailErr) {
+            console.error('Erro ao enviar e-mail de cadastro pendente:', mailErr);
+        }
+
         res.status(201).json({ 
             sucesso: true, 
             mensagem: 'Conta criada com sucesso! Aguarde a aprovação.', 
@@ -428,10 +444,37 @@ app.get('/api/fila', autenticarArtista, async (req, res) => {
 
 app.delete('/api/fila/resetar', autenticarArtista, async (req, res) => {
     const dados = await lerDadosPorArtista(req.artista._id);
+    
+    const filaAntiga = [...(dados.fila || [])];
+    const acessosShow = dados.config.acessos_show || 0;
+    const totalPedidos = filaAntiga.reduce((acc, p) => acc + (p.votos || 1), 0);
+    const totalMusicasDiferentes = filaAntiga.length;
+
+    filaAntiga.sort((a, b) => (b.votos || 1) - (a.votos || 1));
+
     dados.fila = [];
     dados.config.subtitulo = "";
     dados.config.event_id = Date.now().toString();
+    dados.config.acessos_show = 0;
     await dados.save();
+
+    if (req.artista.email) {
+        try {
+            let listaMusicasTexto = filaAntiga.length > 0 
+                ? filaAntiga.map((p, index) => `${index + 1}. ${p.titulo} - ${p.artista} (${p.votos || 1} voto(s))`).join('\n')
+                : 'Nenhum pedido registrado neste show.';
+
+            await resend.emails.send({
+                from: 'Setlist Interativo <setlistinterativo@setlistinterativo.com.br>',
+                to: req.artista.email,
+                subject: 'Resumo do Show Encerrado 🎸',
+                text: `Olá ${req.artista.nome},\n\nO seu show foi encerrado/resetado com sucesso! Aqui está o relatório de interações:\n\n- Total de acessos na página do show: ${acessosShow}\n- Total de pedidos acumulados (votos): ${totalPedidos}\n- Músicas solicitadas diferentes: ${totalMusicasDiferentes}\n\nLista de músicas pedidas:\n${listaMusicasTexto}\n\nAté o próximo show!`
+            });
+        } catch (mailErr) {
+            console.error('Erro ao enviar e-mail de resumo do show:', mailErr);
+        }
+    }
+
     res.json({ sucesso: true, resetar_local: true, mensagem: 'Fila e subtítulo resetados com sucesso.' });
 });
 
@@ -472,6 +515,9 @@ app.get('/api/show/:slug/config', async (req, res) => {
     if (!artista) return res.status(404).json({ erro: 'Artista não encontrado.' });
     
     const dados = await lerDadosPorArtista(artista._id);
+    dados.config.acessos_show = (dados.config.acessos_show || 0) + 1;
+    await dados.save();
+
     res.json({ nome: artista.nome, ...dados.config.toObject() });
 });
 
