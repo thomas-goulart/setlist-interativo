@@ -14,7 +14,7 @@
         .link-painel:hover { color: #1db954; text-decoration: underline; }
 
         /* TELA DE LOGIN */
-        #tela-login { display: flex; justify-content: center; align-items: center; min-height: 80vh; }
+        #tela-login { display: none; justify-content: center; align-items: center; min-height: 80vh; }
         .login-card { background: #1e1e1e; padding: 30px; border-radius: 8px; border: 1px solid #333; width: 100%; max-width: 400px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
         .login-grupo { margin-bottom: 15px; }
         .login-grupo label { display: block; margin-bottom: 5px; color: #aaa; font-size: 0.9rem; }
@@ -134,6 +134,8 @@
             const tokenSalvo = localStorage.getItem('token_admin');
             if (tokenSalvo) {
                 verificarTokenAutomatico(tokenSalvo);
+            } else {
+                document.getElementById('tela-login').style.display = 'flex';
             }
         };
 
@@ -189,9 +191,11 @@
                     carregarRepertorio();
                 } else {
                     localStorage.removeItem('token_admin');
+                    document.getElementById('tela-login').style.display = 'flex';
                 }
             } catch (e) {
-                // Servidor offline
+                // Servidor offline, mas mantém o login visual se houver token salvo ou exibe login
+                document.getElementById('tela-login').style.display = 'flex';
             }
         }
 
