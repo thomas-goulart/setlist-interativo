@@ -139,9 +139,25 @@ function autenticarSuperAdmin(req, res, next) {
     }
 }
 
-// Retorna a página estática inicial customizada na raiz
+// Rotas de Páginas Estáticas
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+app.get('/fila.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'fila.html'));
+});
+
+app.get('/cadastro.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'cadastro.html'));
+});
+
+app.get('/admin.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'admin.html'));
+});
+
+app.get('/show/:slug', (req, res) => {
+    res.sendFile(path.join(__dirname, 'show.html'));
 });
 
 app.get('/api/admin/artistas', autenticarSuperAdmin, async (req, res) => {
@@ -526,10 +542,6 @@ app.patch('/api/show/:slug/fila/:id/voto', async (req, res) => {
     pedido.votos = (pedido.votos || 1) + 1;
     await dados.save();
     res.json({ sucesso: true, mensagem: 'Pedido destacado com sucesso!', pedido });
-});
-
-app.get('/show/:slug', (req, res) => {
-    res.sendFile(path.join(__dirname, 'show.html'));
 });
 
 app.listen(PORT, () => {
