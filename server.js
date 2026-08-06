@@ -528,7 +528,7 @@ app.patch('/api/show/:slug/fila/:id/voto', async (req, res) => {
 });
 
 app.get('/show/:slug', (req, res) => {
-    res.sendFile(__dirname + '/index.html');
+    res.sendFile(__dirname + "/show.html");
 });
 
 app.listen(PORT, () => {
