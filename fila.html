@@ -21,8 +21,8 @@
         .login-grupo input:focus { border-color: #1db954; }
         .btn-entrar { background: #1db954; color: #000; width: 100%; padding: 12px; font-weight: bold; border-radius: 6px; border: none; cursor: pointer; font-size: 1rem; margin-top: 10px; }
         .btn-entrar:hover { background: #1ed760; }
-        #erro-login, #erro-signup { color: #e74c3c; font-size: 0.85rem; text-align: center; margin-top: 10px; display: none; }
-        #sucesso-signup { color: #27ae60; font-size: 0.85rem; text-align: center; margin-top: 10px; display: none; }
+        #erro-login, #erro-signup, #erro-recuperar { color: #e74c3c; font-size: 0.85rem; text-align: center; margin-top: 10px; display: none; }
+        #sucesso-signup, #sucesso-recuperar { color: #27ae60; font-size: 0.85rem; text-align: center; margin-top: 10px; display: none; }
         .toggle-link { text-align: center; margin-top: 15px; font-size: 0.85rem; color: #aaa; }
         .toggle-link a { color: #1db954; text-decoration: none; cursor: pointer; }
         .toggle-link a:hover { text-decoration: underline; }
@@ -91,9 +91,40 @@
                     </div>
                     <button class="btn-entrar" onclick="fazerLogin()">Entrar</button>
                     <div id="erro-login">Usuário ou senha incorretos.</div>
+                    <div class="toggle-link" style="margin-top: 15px;">
+                        <a onclick="alternarTelaAuth('recuperar')">Esqueceu sua senha?</a>
+                    </div>
                     <div class="toggle-link">
                         Não tem uma conta? <a onclick="alternarTelaAuth('signup')">Criar agora</a>
                     </div>
+                </div>
+
+                <!-- FORMULÁRIO DE RECUPERAÇÃO DE SENHA -->
+                <div id="form-recuperar-wrapper" style="display: none;">
+                    <h1>Recuperar Senha</h1>
+                    <p style="text-align: center; color: #888; font-size: 0.9rem; margin-bottom: 20px;">Informe seu e-mail cadastrado</p>
+                    <div class="login-grupo">
+                        <label for="recuperar-email">E-mail</label>
+                        <input type="email" id="recuperar-email" placeholder="seu@email.com">
+                    </div>
+                    <button class="btn-entrar" onclick="solicitarRecuperacao()">Enviar Instruções</button>
+                    <div id="erro-recuperar">E-mail não encontrado.</div>
+                    <div id="sucesso-recuperar">Instruções enviadas para seu e-mail!</div>
+                    <div class="toggle-link">
+                        Lembrou a senha? <a onclick="alternarTelaAuth('login')">Fazer login</a>
+                    </div>
+                </div>
+
+                <!-- FORMULÁRIO DE REDEFINIÇÃO DE SENHA (VIA TOKEN DO E-MAIL) -->
+                <div id="form-novasenha-wrapper" style="display: none;">
+                    <h1>Nova Senha</h1>
+                    <p style="text-align: center; color: #888; font-size: 0.9rem; margin-bottom: 20px;">Digite sua nova senha abaixo</p>
+                    <div class="login-grupo">
+                        <label for="nova-senha-input">Nova Senha</label>
+                        <input type="password" id="nova-senha-input" placeholder="Digite a nova senha">
+                    </div>
+                    <button class="btn-entrar" onclick="salvarNovaSenha()">Salvar Nova Senha</button>
+                    <div id="erro-novasenha" style="color: #e74c3c; font-size: 0.85rem; text-align: center; margin-top: 10px; display: none;">Erro ao redefinir.</div>
                 </div>
 
                 <!-- FORMULÁRIO DE CADASTRO (SIGNUP) -->
@@ -232,6 +263,15 @@
         let statusShowGlobal = 'nao';
 
         window.onload = function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const resetToken = urlParams.get('reset_token');
+
+            if (resetToken) {
+                document.getElementById('tela-login').style.display = 'flex';
+                alternarTelaAuth('novasenha');
+                return;
+            }
+
             const tokenSalvo = localStorage.getItem('token_admin');
             if (tokenSalvo) {
                 verificarTokenAutomatico(tokenSalvo);
@@ -258,16 +298,95 @@
         function alternarTelaAuth(tipo) {
             const loginWrap = document.getElementById('form-login-wrapper');
             const signupWrap = document.getElementById('form-signup-wrapper');
+            const recuperarWrap = document.getElementById('form-recuperar-wrapper');
+            const novasenhaWrap = document.getElementById('form-novasenha-wrapper');
+
+            loginWrap.style.display = 'none';
+            signupWrap.style.display = 'none';
+            recuperarWrap.style.display = 'none';
+            novasenhaWrap.style.display = 'none';
+
             document.getElementById('erro-login').style.display = 'none';
             document.getElementById('erro-signup').style.display = 'none';
             document.getElementById('sucesso-signup').style.display = 'none';
+            document.getElementById('erro-recuperar').style.display = 'none';
+            document.getElementById('sucesso-recuperar').style.display = 'none';
 
             if (tipo === 'signup') {
-                loginWrap.style.display = 'none';
                 signupWrap.style.display = 'block';
+            } else if (tipo === 'recuperar') {
+                recuperarWrap.style.display = 'block';
+            } else if (tipo === 'novasenha') {
+                novasenhaWrap.style.display = 'block';
             } else {
-                signupWrap.style.display = 'none';
                 loginWrap.style.display = 'block';
+            }
+        }
+
+        async function solicitarRecuperacao() {
+            const email = document.getElementById('recuperar-email').value.trim();
+            const erroDiv = document.getElementById('erro-recuperar');
+            const sucessoDiv = document.getElementById('sucesso-recuperar');
+
+            erroDiv.style.display = 'none';
+            sucessoDiv.style.display = 'none';
+
+            if (!email) {
+                erroDiv.textContent = 'Informe o e-mail cadastrado.';
+                erroDiv.style.display = 'block';
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API}/api/esqueci-senha`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    sucessoDiv.style.display = 'block';
+                } else {
+                    erroDiv.textContent = data.erro || 'Erro ao processar solicitação.';
+                    erroDiv.style.display = 'block';
+                }
+            } catch (e) {
+                erroDiv.textContent = 'Erro de conexão com o servidor.';
+                erroDiv.style.display = 'block';
+            }
+        }
+
+        async function salvarNovaSenha() {
+            const novaSenha = document.getElementById('nova-senha-input').value.trim();
+            const erroDiv = document.getElementById('erro-novasenha');
+            const urlParams = new URLSearchParams(window.location.search);
+            const token = urlParams.get('reset_token');
+
+            erroDiv.style.display = 'none';
+
+            if (!novaSenha) {
+                erroDiv.textContent = 'Digite a nova senha.';
+                erroDiv.style.display = 'block';
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API}/api/redefinir-senha`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token, novaSenha })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    alert('Senha redefinida com sucesso! Faça login com sua nova senha.');
+                    window.location.href = 'fila.html';
+                } else {
+                    erroDiv.textContent = data.erro || 'Token inválido ou expirado.';
+                    erroDiv.style.display = 'block';
+                }
+            } catch (e) {
+                erroDiv.textContent = 'Erro de conexão com o servidor.';
+                erroDiv.style.display = 'block';
             }
         }
 
@@ -500,60 +619,6 @@
                 }
             } catch (e) {
                 alert('Erro de conexão com o servidor.');
-            }
-        }
-
-        function renderizarpaineis(fila) {
-            const containerFila = document.getElementById('lista-fila');
-            const containerTocadas = document.getElementById('lista-tocadas');
-            
-            containerFila.innerHTML = '';
-            containerTocadas.innerHTML = '';
-
-            const pendentes = fila.filter(p => !p.status || p.status === 'pendente');
-            const tocadas = fila.filter(p => p.status === 'tocada');
-
-            if (pendentes.length === 0) {
-                containerFila.innerHTML = '<p style="text-align:center; color:#777;">Nenhum pedido na fila no momento.</p>';
-            } else {
-                pendentes.forEach(p => {
-                    const idUnico = p.pedido_id || p.id;
-                    const div = document.createElement('div');
-                    div.className = 'musica-card';
-                    div.innerHTML = `
-                        <div>
-                            <strong style="font-size: 1.05rem;">${p.titulo}</strong> - <span style="color:#aaa;">${p.artista}</span>
-                            <div style="font-size: 0.85rem; color: #1db954; margin-top: 4px;">${p.dedicatoria || ''}</div>
-                            <div style="font-size: 0.75rem; color: #888; margin-top: 2px;">Votos: ${p.votos || 1}</div>
-                        </div>
-                        <div style="display: flex; gap: 8px; align-items: center;">
-                            <button class="btn-tocar" onclick="marcarTocada('${idUnico}')">Marcar Tocada</button>
-                            <button class="btn-excluir" onclick="excluirPedido('${idUnico}')">Excluir</button>
-                        </div>
-                    `;
-                    containerFila.appendChild(div);
-                });
-            }
-
-            if (tocadas.length === 0) {
-                containerTocadas.innerHTML = '<p style="text-align:center; color:#777;">Nenhuma música tocada ainda.</p>';
-            } else {
-                tocadas.forEach(p => {
-                    const idUnico = p.pedido_id || p.id;
-                    const div = document.createElement('div');
-                    div.className = 'musica-card tocada';
-                    div.innerHTML = `
-                        <div>
-                            <strong style="font-size: 1.05rem;">${p.titulo}</strong> - <span style="color:#aaa;">${p.artista}</span>
-                            <div style="font-size: 0.85rem; color: #e67e22; margin-top: 4px;">${p.dedicatoria || ''}</div>
-                        </div>
-                        <div style="display: flex; gap: 8px; align-items: center;">
-                            <span style="color: #e67e22; font-size: 0.85rem; font-weight: bold;">Tocada 🎸</span>
-                            <button class="btn-excluir" onclick="excluirPedido('${idUnico}')">Excluir</button>
-                        </div>
-                    `;
-                    containerTocadas.appendChild(div);
-                });
             }
         }
 

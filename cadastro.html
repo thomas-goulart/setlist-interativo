@@ -22,7 +22,11 @@
         .login-grupo input:focus { border-color: #1db954; }
         .btn-entrar { background: #1db954; color: #000; width: 100%; padding: 12px; font-weight: bold; border-radius: 6px; border: none; cursor: pointer; font-size: 1rem; margin-top: 10px; }
         .btn-entrar:hover { background: #1ed760; }
-        #erro-login { color: #e74c3c; font-size: 0.85rem; text-align: center; margin-top: 10px; display: none; }
+        #erro-login, #erro-recuperar { color: #e74c3c; font-size: 0.85rem; text-align: center; margin-top: 10px; display: none; }
+        #sucesso-recuperar { color: #27ae60; font-size: 0.85rem; text-align: center; margin-top: 10px; display: none; }
+        .toggle-link { text-align: center; margin-top: 15px; font-size: 0.85rem; color: #aaa; }
+        .toggle-link a { color: #1db954; text-decoration: none; cursor: pointer; }
+        .toggle-link a:hover { text-decoration: underline; }
 
         /* CONTEÚDO PROTEGIDO */
         #conteudo-protegido { display: none; }
@@ -60,18 +64,52 @@
         <!-- TELA DE LOGIN -->
         <div id="tela-login">
             <div class="login-card">
-                <h1>Cadastro de Repertório</h1>
-                <p style="text-align: center; color: #888; font-size: 0.9rem; margin-bottom: 20px;">Faça login para gerenciar o repertório</p>
-                <div class="login-grupo">
-                    <label for="usuario-input">Usuário</label>
-                    <input type="text" id="usuario-input" placeholder="Digite seu usuário">
+                <!-- FORMULÁRIO DE LOGIN -->
+                <div id="form-login-wrapper">
+                    <h1>Cadastro de Repertório</h1>
+                    <p style="text-align: center; color: #888; font-size: 0.9rem; margin-bottom: 20px;">Faça login para gerenciar o repertório</p>
+                    <div class="login-grupo">
+                        <label for="usuario-input">Usuário</label>
+                        <input type="text" id="usuario-input" placeholder="Digite seu usuário">
+                    </div>
+                    <div class="login-grupo">
+                        <label for="senha-input">Senha</label>
+                        <input type="password" id="senha-input" placeholder="Digite sua senha">
+                    </div>
+                    <button class="btn-entrar" onclick="fazerLogin()">Entrar</button>
+                    <div id="erro-login">Usuário ou senha incorretos.</div>
+                    <div class="toggle-link" style="margin-top: 15px;">
+                        <a onclick="alternarTelaAuth('recuperar')">Esqueceu sua senha?</a>
+                    </div>
                 </div>
-                <div class="login-grupo">
-                    <label for="senha-input">Senha</label>
-                    <input type="password" id="senha-input" placeholder="Digite sua senha">
+
+                <!-- FORMULÁRIO DE RECUPERAÇÃO DE SENHA -->
+                <div id="form-recuperar-wrapper" style="display: none;">
+                    <h1>Recuperar Senha</h1>
+                    <p style="text-align: center; color: #888; font-size: 0.9rem; margin-bottom: 20px;">Informe seu e-mail cadastrado</p>
+                    <div class="login-grupo">
+                        <label for="recuperar-email">E-mail</label>
+                        <input type="email" id="recuperar-email" placeholder="seu@email.com">
+                    </div>
+                    <button class="btn-entrar" onclick="solicitarRecuperacao()">Enviar Instruções</button>
+                    <div id="erro-recuperar">E-mail não encontrado.</div>
+                    <div id="sucesso-recuperar">Instruções enviadas para seu e-mail!</div>
+                    <div class="toggle-link">
+                        Lembrou a senha? <a onclick="alternarTelaAuth('login')">Fazer login</a>
+                    </div>
                 </div>
-                <button class="btn-entrar" onclick="fazerLogin()">Entrar</button>
-                <div id="erro-login">Usuário ou senha incorretos.</div>
+
+                <!-- FORMULÁRIO DE REDEFINIÇÃO DE SENHA -->
+                <div id="form-novasenha-wrapper" style="display: none;">
+                    <h1>Nova Senha</h1>
+                    <p style="text-align: center; color: #888; font-size: 0.9rem; margin-bottom: 20px;">Digite sua nova senha abaixo</p>
+                    <div class="login-grupo">
+                        <label for="nova-senha-input">Nova Senha</label>
+                        <input type="password" id="nova-senha-input" placeholder="Digite a nova senha">
+                    </div>
+                    <button class="btn-entrar" onclick="salvarNovaSenha()">Salvar Nova Senha</button>
+                    <div id="erro-novasenha" style="color: #e74c3c; font-size: 0.85rem; text-align: center; margin-top: 10px; display: none;">Erro ao redefinir.</div>
+                </div>
             </div>
         </div>
 
@@ -131,6 +169,15 @@
         let repertorioGlobal = [];
 
         window.onload = function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const resetToken = urlParams.get('reset_token');
+
+            if (resetToken) {
+                document.getElementById('tela-login').style.display = 'flex';
+                alternarTelaAuth('novasenha');
+                return;
+            }
+
             const tokenSalvo = localStorage.getItem('token_admin');
             if (tokenSalvo) {
                 verificarTokenAutomatico(tokenSalvo);
@@ -145,6 +192,95 @@
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
             };
+        }
+
+        function alternarTelaAuth(tipo) {
+            const loginWrap = document.getElementById('form-login-wrapper');
+            const recuperarWrap = document.getElementById('form-recuperar-wrapper');
+            const novasenhaWrap = document.getElementById('form-novasenha-wrapper');
+
+            loginWrap.style.display = 'none';
+            recuperarWrap.style.display = 'none';
+            novasenhaWrap.style.display = 'none';
+
+            document.getElementById('erro-login').style.display = 'none';
+            document.getElementById('erro-recuperar').style.display = 'none';
+            document.getElementById('sucesso-recuperar').style.display = 'none';
+
+            if (tipo === 'recuperar') {
+                recuperarWrap.style.display = 'block';
+            } else if (tipo === 'novasenha') {
+                novasenhaWrap.style.display = 'block';
+            } else {
+                loginWrap.style.display = 'block';
+            }
+        }
+
+        async function solicitarRecuperacao() {
+            const email = document.getElementById('recuperar-email').value.trim();
+            const erroDiv = document.getElementById('erro-recuperar');
+            const sucessoDiv = document.getElementById('sucesso-recuperar');
+
+            erroDiv.style.display = 'none';
+            sucessoDiv.style.display = 'none';
+
+            if (!email) {
+                erroDiv.textContent = 'Informe o e-mail cadastrado.';
+                erroDiv.style.display = 'block';
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API}/api/esqueci-senha`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    sucessoDiv.style.display = 'block';
+                } else {
+                    erroDiv.textContent = data.erro || 'Erro ao processar solicitação.';
+                    erroDiv.style.display = 'block';
+                }
+            } catch (e) {
+                erroDiv.textContent = 'Erro de conexão com o servidor.';
+                erroDiv.style.display = 'block';
+            }
+        }
+
+        async function salvarNovaSenha() {
+            const novaSenha = document.getElementById('nova-senha-input').value.trim();
+            const erroDiv = document.getElementById('erro-novasenha');
+            const urlParams = new URLSearchParams(window.location.search);
+            const token = urlParams.get('reset_token');
+
+            erroDiv.style.display = 'none';
+
+            if (!novaSenha) {
+                erroDiv.textContent = 'Digite a nova senha.';
+                erroDiv.style.display = 'block';
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API}/api/redefinir-senha`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token, novaSenha })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    alert('Senha redefinida com sucesso! Faça login com sua nova senha.');
+                    window.location.href = 'cadastro.html';
+                } else {
+                    erroDiv.textContent = data.erro || 'Token inválido ou expirado.';
+                    erroDiv.style.display = 'block';
+                }
+            } catch (e) {
+                erroDiv.textContent = 'Erro de conexão com o servidor.';
+                erroDiv.style.display = 'block';
+            }
         }
 
         async function fazerLogin() {
@@ -194,7 +330,6 @@
                     document.getElementById('tela-login').style.display = 'flex';
                 }
             } catch (e) {
-                // Servidor offline, mas mantém o login visual se houver token salvo ou exibe login
                 document.getElementById('tela-login').style.display = 'flex';
             }
         }
