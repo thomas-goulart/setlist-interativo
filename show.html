@@ -10,7 +10,7 @@
         .subtitulo-publico { text-align: center; color: #aaa; font-size: 1.1rem; margin-bottom: 25px; line-height: 1.4; padding: 0 10px; }
         .container { max-width: 600px; margin: 0 auto; }
         
-        .tela-bloqueio { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 80vh; text-align: center; padding: 20px; }
+        .tela-bloqueio { display: none; flex-direction: column; align-items: center; justify-content: center; height: 80vh; text-align: center; padding: 20px; }
         .tela-bloqueio h2 { color: #1db954; font-size: 2rem; margin-bottom: 10px; }
         .tela-bloqueio p { color: #aaa; font-size: 1.2rem; max-width: 400px; line-height: 1.5; }
 
@@ -70,7 +70,7 @@
             <p>Conectando ao servidor... Assim que o artista liberar o setlist, a página será atualizada automaticamente.</p>
         </div>
 
-        <div id="conteudo-encerrado" class="tela-bloqueio" style="display: none;">
+        <div id="conteudo-encerrado" class="tela-bloqueio">
             <span style="font-size: 4rem; margin-bottom: 10px;">🎸</span>
             <h2>Show Encerrado!</h2>
             <p>Muito obrigado a todos pela presença e por curtirem com a gente! Até a próxima!</p>
@@ -594,7 +594,6 @@
             }
         }
 
-        // Ajusta o link do rodapé para manter o contexto do slug do artista
         if (SLUG_ARTISTA) {
             const linkPainel = document.getElementById('link-painel-artista');
             if (linkPainel) {
