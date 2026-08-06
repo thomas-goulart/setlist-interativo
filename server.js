@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const { Resend } = require('resend');
 const bcrypt = require('bcrypt');
 const path = require('path');
+const crypto = require('crypto');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -58,7 +59,9 @@ const artistSchema = new mongoose.Schema({
     senha: { type: String, required: true },
     email: { type: String, required: true },
     slug: { type: String, required: true, unique: true },
-    aprovado: { type: Boolean, default: false }
+    aprovado: { type: Boolean, default: false },
+    reset_token: { type: String, default: null },
+    reset_expira: { type: Date, default: null }
 });
 const Artist = mongoose.models.Artist || mongoose.model('Artist', artistSchema);
 
@@ -138,7 +141,6 @@ async function autenticarSuperAdmin(req, res, next) {
     const token = authHeader.split(' ')[1];
     try {
         let senhaPlana = '';
-        // Suporta tanto token direto quanto Basic Auth decodificado
         if (token.includes(':') || !token.startsWith('$2b$')) {
             try {
                 senhaPlana = Buffer.from(token, 'base64').toString('utf8').split(':')[1] || Buffer.from(token, 'base64').toString('utf8');
@@ -149,7 +151,6 @@ async function autenticarSuperAdmin(req, res, next) {
             senhaPlana = token;
         }
 
-        // Hash bcrypt correspondente à senha do Super Admin ("Thom@s399!") ou variável de ambiente
         const hashSuperAdmin = process.env.SUPER_ADMIN_HASH || '$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy';
         
         const isMatch = await bcrypt.compare(senhaPlana, hashSuperAdmin);
@@ -182,6 +183,64 @@ app.get('/admin.html', (req, res) => {
 
 app.get('/show/:slug', (req, res) => {
     res.sendFile(path.join(__dirname, 'show.html'));
+});
+
+// Rotas de Recuperação de Senha (API)
+app.post('/api/esqueci-senha', async (req, res) => {
+    try {
+        const { email } = req.body;
+        if (!email) return res.status(400).json({ erro: 'Informe o e-mail cadastrado.' });
+
+        const artista = await Artist.findOne({ email: email.trim().toLowerCase() });
+        if (!artista) {
+            // Por segurança, respondemos sucesso para não revelar se o e-mail existe ou não
+            return res.json({ sucesso: true, mensagem: 'Se o e-mail estiver cadastrado, as instruções foram enviadas.' });
+        }
+
+        const tokenReset = crypto.randomBytes(32).toString('hex');
+        artista.reset_token = tokenReset;
+        artista.reset_expira = Date.now() + 3600000; // Validade de 1 hora
+        await artista.save();
+
+        const urlHost = req.protocol + '://' + req.get('host');
+        const linkRedefinicao = `${urlHost}/fila.html?reset_token=${tokenReset}`;
+
+        await resend.emails.send({
+            from: 'Setlist Interativo <setlistinterativo@setlistinterativo.com.br>',
+            to: artista.email,
+            subject: 'Recuperação de Senha - Setlist Interativo 🎸',
+            text: `Olá ${artista.nome},\n\nVocê solicitou a recuperação de senha da sua conta. Acesse o link abaixo para definir uma nova senha (válido por 1 hora):\n\n${linkRedefinicao}\n\nSe você não solicitou isso, ignore este e-mail.`
+        });
+
+        res.json({ sucesso: true, mensagem: 'Se o e-mail estiver cadastrado, as instruções foram enviadas.' });
+    } catch (e) {
+        res.status(500).json({ erro: 'Erro ao processar solicitação de recuperação.' });
+    }
+});
+
+app.post('/api/redefinir-senha', async (req, res) => {
+    try {
+        const { token, novaSenha } = req.body;
+        if (!token || !novaSenha) return res.status(400).json({ erro: 'Token e nova senha são obrigatórios.' });
+
+        const artista = await Artist.findOne({
+            reset_token: token,
+            reset_expira: { $gt: Date.now() }
+        });
+
+        if (!artista) {
+            return res.status(400).json({ erro: 'Token inválido ou expirado.' });
+        }
+
+        artista.senha = await bcrypt.hash(novaSenha, 10);
+        artista.reset_token = null;
+        artista.reset_expira = null;
+        await artista.save();
+
+        res.json({ sucesso: true, mensagem: 'Senha redefinida com sucesso! Você já pode fazer login.' });
+    } catch (e) {
+        res.status(500).json({ erro: 'Erro ao redefinir senha.' });
+    }
 });
 
 app.get('/api/admin/artistas', autenticarSuperAdmin, async (req, res) => {
