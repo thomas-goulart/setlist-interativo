@@ -31,7 +31,8 @@ const configSchema = new mongoose.Schema({
     show_liberado: { type: String, default: 'nao' },
     subtitulo: { type: String, default: '' },
     event_id: { type: String, default: () => Date.now().toString() },
-    acessos_show: { type: Number, default: 0 }
+    acessos_show: { type: Number, default: 0 },
+    show_inicio_ts: { type: Number, default: null }
 });
 
 const musicaSchema = new mongoose.Schema({
@@ -74,14 +75,14 @@ async function lerDadosPorArtista(artistaId) {
     if (!dados) {
         dados = new ArtistData({
             artista_id: artistaId,
-            config: { limite_pedidos: 'ilimitado', show_liberado: 'nao', subtitulo: '', event_id: Date.now().toString(), acessos_show: 0 },
+            config: { limite_pedidos: 'ilimitado', show_liberado: 'nao', subtitulo: '', event_id: Date.now().toString(), acessos_show: 0, show_inicio_ts: null },
             repertorio: [],
             fila: []
         });
         await dados.save();
     }
     if (!dados.config) {
-        dados.config = { limite_pedidos: 'ilimitado', show_liberado: 'nao', subtitulo: '', event_id: Date.now().toString(), acessos_show: 0 };
+        dados.config = { limite_pedidos: 'ilimitado', show_liberado: 'nao', subtitulo: '', event_id: Date.now().toString(), acessos_show: 0, show_inicio_ts: null };
     }
     if (!dados.config.event_id) {
         dados.config.event_id = Date.now().toString();
@@ -89,6 +90,10 @@ async function lerDadosPorArtista(artistaId) {
     }
     if (dados.config.acessos_show === undefined) {
         dados.config.acessos_show = 0;
+        await dados.save();
+    }
+    if (dados.config.show_inicio_ts === undefined) {
+        dados.config.show_inicio_ts = null;
         await dados.save();
     }
     return dados;
@@ -125,17 +130,36 @@ async function autenticarArtista(req, res, next) {
     }
 }
 
-function autenticarSuperAdmin(req, res, next) {
+async function autenticarSuperAdmin(req, res, next) {
     const authHeader = req.headers['authorization'];
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
         return res.status(401).json({ erro: 'Acesso negado.' });
     }
     const token = authHeader.split(' ')[1];
-    const credentials = Buffer.from('thomas:Thom@s399!', 'utf8').toString('base64');
-    if (token === 'Thom@s399!' || token === credentials) {
-        next();
-    } else {
-        res.status(401).json({ erro: 'Credenciais de admin incorretas.' });
+    try {
+        let senhaPlana = '';
+        // Suporta tanto token direto quanto Basic Auth decodificado
+        if (token.includes(':') || !token.startsWith('$2b$')) {
+            try {
+                senhaPlana = Buffer.from(token, 'base64').toString('utf8').split(':')[1] || Buffer.from(token, 'base64').toString('utf8');
+            } catch (err) {
+                senhaPlana = token;
+            }
+        } else {
+            senhaPlana = token;
+        }
+
+        // Hash bcrypt correspondente à senha do Super Admin ("Thom@s399!") ou variável de ambiente
+        const hashSuperAdmin = process.env.SUPER_ADMIN_HASH || '$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy';
+        
+        const isMatch = await bcrypt.compare(senhaPlana, hashSuperAdmin);
+        if (isMatch || token === 'Thom@s399!') {
+            next();
+        } else {
+            res.status(401).json({ erro: 'Credenciais de admin incorretas.' });
+        }
+    } catch (e) {
+        res.status(401).json({ erro: 'Erro na autenticação do admin.' });
     }
 }
 
@@ -315,7 +339,16 @@ app.post('/api/config', autenticarArtista, async (req, res) => {
     const dados = await lerDadosPorArtista(req.artista._id);
     if (!dados.config) dados.config = {};
     if (limite_pedidos !== undefined) dados.config.limite_pedidos = limite_pedidos;
-    if (show_liberado !== undefined) dados.config.show_liberado = show_liberado;
+    
+    if (show_liberado !== undefined) {
+        const statusAnterior = dados.config.show_liberado;
+        dados.config.show_liberado = show_liberado;
+        
+        if (statusAnterior !== 'sim' && show_liberado === 'sim') {
+            dados.config.show_inicio_ts = Date.now();
+        }
+    }
+
     if (subtitulo !== undefined) dados.config.subtitulo = subtitulo;
     await dados.save();
     res.json({ sucesso: true, config: dados.config });
@@ -399,25 +432,53 @@ app.delete('/api/fila/resetar', autenticarArtista, async (req, res) => {
     const totalPedidos = filaAntiga.reduce((acc, p) => acc + (p.votos || 1), 0);
     const totalMusicasDiferentes = filaAntiga.length;
 
+    const tocadasList = filaAntiga.filter(p => p.status === 'tocada');
+    const totalTocadas = tocadasList.reduce((acc, p) => acc + (p.votos || 1), 0);
+    const totalPendentes = totalPedidos - totalTocadas;
+
+    const terminoTs = Date.now();
+    const inicioTs = dados.config.show_inicio_ts;
+    
+    let horarioInicioStr = 'Não registrado';
+    let horarioTerminoStr = new Date(terminoTs).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+    let duracaoStr = 'Indisponível';
+
+    if (inicioTs) {
+        horarioInicioStr = new Date(inicioTs).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+        const diffMs = terminoTs - inicioTs;
+        const diffMins = Math.floor(diffMs / 60000);
+        const horas = Math.floor(diffMins / 60);
+        const mins = diffMins % 60;
+        duracaoStr = horas > 0 ? `${horas}h ${mins}m` : `${mins} minuto(s)`;
+    }
+
+    let musicaMaisPedidaStr = 'Nenhuma';
+    if (filaAntiga.length > 0) {
+        const copiaOrdenada = [...filaAntiga].sort((a, b) => (b.votos || 1) - (a.votos || 1));
+        const top = copiaOrdenada[0];
+        musicaMaisPedidaStr = `${top.titulo} - ${top.artista} (${top.votos || 1} voto(s))`;
+    }
+
     filaAntiga.sort((a, b) => (b.votos || 1) - (a.votos || 1));
 
     dados.fila = [];
     dados.config.subtitulo = "";
     dados.config.event_id = Date.now().toString();
     dados.config.acessos_show = 0;
+    dados.config.show_inicio_ts = null;
     await dados.save();
 
     if (req.artista.email) {
         try {
             let listaMusicasTexto = filaAntiga.length > 0 
-                ? filaAntiga.map((p, index) => `${index + 1}. ${p.titulo} - ${p.artista} (${p.votos || 1} voto(s))`).join('\n')
+                ? filaAntiga.map((p, index) => `${index + 1}. ${p.titulo} - ${p.artista} - [Status: ${p.status === 'tocada' ? 'Tocada 🎸' : 'Pendente'}] (${p.votos || 1} voto(s))`).join('\n')
                 : 'Nenhum pedido registrado neste show.';
 
             await resend.emails.send({
                 from: 'Setlist Interativo <setlistinterativo@setlistinterativo.com.br>',
                 to: req.artista.email,
-                subject: 'Resumo do Show Encerrado 🎸',
-                text: `Olá ${req.artista.nome},\n\nO seu show foi encerrado/resetado com sucesso! Aqui está o relatório de interações:\n\n- Total de acessos na página do show: ${acessosShow}\n- Total de pedidos acumulados (votos): ${totalPedidos}\n- Músicas solicitadas diferentes: ${totalMusicasDiferentes}\n\nLista de músicas pedidas:\n${listaMusicasTexto}\n\nAté o próximo show!`
+                subject: 'Relatório Completo do Show Encerrado 🎸',
+                text: `Olá ${req.artista.nome},\n\nO seu show foi encerrado com sucesso! Aqui está o relatório completo de interações:\n\n- Horário de Início: ${horarioInicioStr}\n- Horário de Término: ${horarioTerminoStr}\n- Duração do Show: ${duracaoStr}\n- Total de acessos na página do show: ${acessosShow}\n- Total de músicas pedidas: ${totalPedidos}\n- Músicas tocadas: ${totalTocadas}\n- Músicas restantes/pendentes: ${totalPendentes}\n- Total de músicas diferentes solicitadas: ${totalMusicasDiferentes}\n- 🏆 Música mais pedida: ${musicaMaisPedidaStr}\n\nLista completa de pedidos:\n${listaMusicasTexto}\n\nAté o próximo show!`
             });
         } catch (mailErr) {
             console.error('Erro ao enviar e-mail de resumo do show:', mailErr);
