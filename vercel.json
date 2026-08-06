@@ -1,9 +1,26 @@
 {
   "version": 2,
-  "rewrites": [
-    { "source": "/", "destination": "/home.html" },
-    { "source": "/api/(.*)", "destination": "/server.js" },
-    { "source": "/show/(.*)", "destination": "/server.js" },
-    { "source": "/(.*)", "destination": "/server.js" }
+  "builds": [
+    {
+      "src": "server.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "server.js"
+    },
+    {
+      "src": "/show/([a-zA-Z0-9_-]+)",
+      "dest": "/show.html"
+    },
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "server.js"
+    }
   ]
 }
