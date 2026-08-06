@@ -3,6 +3,7 @@ const cors = require('cors');
 const mongoose = require('mongoose');
 const { Resend } = require('resend');
 const bcrypt = require('bcrypt');
+const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -140,7 +141,7 @@ function autenticarSuperAdmin(req, res, next) {
 
 // Retorna a página estática inicial customizada na raiz
 app.get('/', (req, res) => {
-    res.sendFile(__dirname + '/home.html');
+    res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 app.get('/api/admin/artistas', autenticarSuperAdmin, async (req, res) => {
@@ -528,7 +529,7 @@ app.patch('/api/show/:slug/fila/:id/voto', async (req, res) => {
 });
 
 app.get('/show/:slug', (req, res) => {
-    res.sendFile(__dirname + "/show.html");
+    res.sendFile(path.join(__dirname, 'show.html'));
 });
 
 app.listen(PORT, () => {
