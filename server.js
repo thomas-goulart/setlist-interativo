@@ -327,7 +327,9 @@ app.post('/api/signup', async (req, res) => {
                 from: 'Setlist Interativo <setlistinterativo@setlistinterativo.com.br>',
                 to: email,
                 subject: 'Cadastro recebido - Setlist Interativo 🎸',
-                text: `Olá ${nome},\n\nRecebemos o seu cadastro no Setlist Interativo! Sua conta está aguardando a aprovação do administrador.\n\nAssim que for aprovada, você receberá um novo e-mail para começar a gerenciar seus shows.`
+                text: `Olá ${nome},\n\nRecebemos o seu cadastro no Setlist Interativo! Sua conta está aguardando a aprovação do administrador.\n\nAssim que for aprovada, você receberá um novo e-mail para começar a gerenciar seus shows.
+
+Acesse seu painel aqui: https://setlistinterativo.com.br/fila.html`
             });
         } catch (mailErr) {
             console.error('Erro ao enviar e-mail de cadastro pendente:', mailErr);
