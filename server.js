@@ -586,12 +586,30 @@ app.get('/api/show/:slug/config', async (req, res) => {
     if (!artista) return res.status(404).json({ erro: 'Artista não encontrado.' });
     
     const dados = await lerDadosPorArtista(artista._id);
-    if (dados.config.show_liberado === 'sim') {
-        dados.config.acessos_show = (dados.config.acessos_show || 0) + 1;
-        await dados.save();
-    }
-
     res.json({ nome: artista.nome, ...dados.config.toObject() });
+});
+
+app.post('/api/show/:slug/acesso', async (req, res) => {
+    try {
+        const { visitor_id } = req.body;
+        const artista = await Artist.findOne({ slug: req.params.slug });
+        if (!artista) return res.status(404).json({ erro: 'Artista não encontrado.' });
+
+        const dados = await lerDadosPorArtista(artista._id);
+        if (dados.config && dados.config.show_liberado === 'sim') {
+            if (!dados.config.visitantes_unicos) {
+                dados.config.visitantes_unicos = [];
+            }
+            if (visitor_id && !dados.config.visitantes_unicos.includes(visitor_id)) {
+                dados.config.visitantes_unicos.push(visitor_id);
+                dados.config.acessos_show = dados.config.visitantes_unicos.length;
+                await dados.save();
+            }
+        }
+        res.json({ sucesso: true });
+    } catch (e) {
+        res.status(500).json({ erro: 'Erro ao registrar acesso.' });
+    }
 });
 
 app.get('/api/show/:slug/repertorio', async (req, res) => {

@@ -604,5 +604,29 @@
         carregarDados();
         setInterval(carregarDados, 4000);
     </script>
+
+    <script>
+        // Enregistra acesso único do visitante para o show ativo
+        (async function() {
+            try {
+                let visitorId = localStorage.getItem("visitor_unique_id_" + window.location.pathname.split("/").pop());
+                if (!visitorId) {
+                    visitorId = "user_" + Math.random().toString(36).substring(2) + Date.now();
+                    localStorage.setItem("visitor_unique_id_" + window.location.pathname.split("/").pop(), visitorId);
+                }
+                const slug = window.location.pathname.split("/").pop();
+                if (slug) {
+                    await fetch("https://setlist-interativo-api.onrender.com/api/show/" + slug + "/acesso", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ visitor_id: visitorId })
+                    });
+                }
+            } catch (e) {
+                console.log("Erro ao registrar acesso único");
+            }
+        })();
+    </script>
 </body>
+
 </html>
