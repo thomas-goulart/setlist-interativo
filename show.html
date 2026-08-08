@@ -579,7 +579,7 @@
                 const res = await fetch(`${API}/api/show/${SLUG_ARTISTA}/fila/${pedido_id}/voto`, { 
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ event_id: configGlobal.event_id })
+                    body: JSON.stringify({ event_id: configGlobal.event_id, tipo_pedido: 'destaque' })
                 });
                 const data = await res.json();
                 if (!res.ok) {
