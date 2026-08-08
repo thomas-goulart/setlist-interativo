@@ -211,12 +211,12 @@ app.post('/api/esqueci-senha', async (req, res) => {
         const urlHost = req.protocol + '://' + req.get('host');
         const linkRedefinicao = `${urlHost}/fila.html?reset_token=${tokenReset}`;
 
-        await resend.emails.send({
-            from: 'Setlist Interativo <setlistinterativo@setlistinterativo.com.br>',
-            to: artista.email,
-            subject: 'Recuperação de Senha - Setlist Interativo 🎸',
-            text: `Olá ${artista.nome},\n\nVocê solicitou a recuperação de senha da sua conta. Acesse o link abaixo para definir uma nova senha (válido por 1 hora):\n\n${linkRedefinicao}\n\nSe você não solicitou isso, ignore este e-mail.`
-        });
+            await resend.emails.send({
+                from: 'Setlist Interativo <setlistinterativo@setlistinterativo.com.br>',
+                to: req.artista.email,
+                subject: 'Relatório Completo do Show Encerrado 🎸',
+                text: `Olá ${req.artista.nome},\n\nO seu show foi encerrado com sucesso! Aqui está o relatório completo de interações:\n\n- Horário de Início: ${horarioInicioStr}\n- Horário de Término: ${horarioTerminoStr}\n- Duração do Show: ${duracaoStr}\n- Total de acessos únicos na página do show: ${acessosShow}\n- Músicas tocadas: ${totalTocadas}\n- Total de músicas diferentes solicitadas: ${totalMusicasDiferentes}\n- 🏆 Música mais pedida: ${musicaMaisPedidaStr}\n\nLista completa de pedidos:\n${listaMusicasTexto}\n\nAté o próximo show!`
+            });
 
         res.json({ sucesso: true, mensagem: 'Se o e-mail estiver cadastrado, as instruções foram enviadas.' });
     } catch (e) {
@@ -270,12 +270,12 @@ app.patch('/api/admin/artistas/:id/aprovar', autenticarSuperAdmin, async (req, r
 
         if (!statusAnterior && aprovado === true && artista.email) {
             try {
-                await resend.emails.send({
-                    from: 'Setlist Interativo <setlistinterativo@setlistinterativo.com.br>',
-                    to: artista.email,
-                    subject: 'Sua conta foi aprovada! 🎸',
-                    text: `Olá ${artista.nome},\n\nSua conta no Setlist Interativo foi aprovada pelo administrador com sucesso! Você já pode fazer login e gerenciar os seus shows.\n\nAcesse o painel e divirta-se!\n\nAcesse seu painel aqui: https://setlistinterativo.com.br/fila.html`
-                });
+            await resend.emails.send({
+                from: 'Setlist Interativo <setlistinterativo@setlistinterativo.com.br>',
+                to: req.artista.email,
+                subject: 'Relatório Completo do Show Encerrado 🎸',
+                text: `Olá ${req.artista.nome},\n\nO seu show foi encerrado com sucesso! Aqui está o relatório completo de interações:\n\n- Horário de Início: ${horarioInicioStr}\n- Horário de Término: ${horarioTerminoStr}\n- Duração do Show: ${duracaoStr}\n- Total de acessos únicos na página do show: ${acessosShow}\n- Músicas tocadas: ${totalTocadas}\n- Total de músicas diferentes solicitadas: ${totalMusicasDiferentes}\n- 🏆 Música mais pedida: ${musicaMaisPedidaStr}\n\nLista completa de pedidos:\n${listaMusicasTexto}\n\nAté o próximo show!`
+            });
             } catch (mailErr) {
                 console.error('Erro ao enviar e-mail de aprovação via Resend:', mailErr);
             }
@@ -331,11 +331,9 @@ app.post('/api/signup', async (req, res) => {
         try {
             await resend.emails.send({
                 from: 'Setlist Interativo <setlistinterativo@setlistinterativo.com.br>',
-                to: email,
-                subject: 'Cadastro recebido - Setlist Interativo 🎸',
-                text: `Olá ${nome},\n\nRecebemos o seu cadastro no Setlist Interativo! Sua conta está aguardando a aprovação do administrador.\n\nAssim que for aprovada, você receberá um novo e-mail para começar a gerenciar seus shows.
-
-Acesse seu painel aqui: https://setlistinterativo.com.br/fila.html`
+                to: req.artista.email,
+                subject: 'Relatório Completo do Show Encerrado 🎸',
+                text: `Olá ${req.artista.nome},\n\nO seu show foi encerrado com sucesso! Aqui está o relatório completo de interações:\n\n- Horário de Início: ${horarioInicioStr}\n- Horário de Término: ${horarioTerminoStr}\n- Duração do Show: ${duracaoStr}\n- Total de acessos únicos na página do show: ${acessosShow}\n- Músicas tocadas: ${totalTocadas}\n- Total de músicas diferentes solicitadas: ${totalMusicasDiferentes}\n- 🏆 Música mais pedida: ${musicaMaisPedidaStr}\n\nLista completa de pedidos:\n${listaMusicasTexto}\n\nAté o próximo show!`
             });
         } catch (mailErr) {
             console.error('Erro ao enviar e-mail de cadastro pendente:', mailErr);
@@ -547,12 +545,9 @@ app.delete('/api/fila/resetar', autenticarArtista, async (req, res) => {
             await resend.emails.send({
                 from: 'Setlist Interativo <setlistinterativo@setlistinterativo.com.br>',
                 to: req.artista.email,
-            await resend.emails.send({
-                from: "Setlist Interativo <setlistinterativo@setlistinterativo.com.br>",
-                to: req.artista.email,
-                subject: "Relatório Completo do Show Encerrado 🎸",
+                subject: 'Relatório Completo do Show Encerrado 🎸',
                 text: `Olá ${req.artista.nome},\n\nO seu show foi encerrado com sucesso! Aqui está o relatório completo de interações:\n\n- Horário de Início: ${horarioInicioStr}\n- Horário de Término: ${horarioTerminoStr}\n- Duração do Show: ${duracaoStr}\n- Total de acessos únicos na página do show: ${acessosShow}\n- Músicas tocadas: ${totalTocadas}\n- Total de músicas diferentes solicitadas: ${totalMusicasDiferentes}\n- 🏆 Música mais pedida: ${musicaMaisPedidaStr}\n\nLista completa de pedidos:\n${listaMusicasTexto}\n\nAté o próximo show!`
-            });        } catch (mailErr) {
+            });
             console.error('Erro ao enviar e-mail de resumo do show:', mailErr);
         }
     }
