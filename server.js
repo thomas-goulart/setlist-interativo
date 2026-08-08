@@ -548,8 +548,6 @@ app.delete('/api/fila/resetar', autenticarArtista, async (req, res) => {
                 from: 'Setlist Interativo <setlistinterativo@setlistinterativo.com.br>',
                 to: req.artista.email,
                 subject: 'Relatório Completo do Show Encerrado 🎸',
-                text: `Olá ${req.artista.nome},\n\nO seu show foi encerrado com sucesso! Aqui está o relatório completo de interações:\n\n- Horário de Início: ${horarioInicioStr}\n- Horário de Término: ${horarioTerminoStr}\n- Duração do Show: ${duracaoStr}\n- Total de acessos únicos na página do show: ${acessosShow}\n- Total de pedidos normais: ${totalPedidosNormais}
-- Total de pedidos "Quero Ouvir Logo": ${totalPedidosDestaque}\n- Músicas tocadas: ${totalTocadas}\n- Músicas restantes/pendentes: ${totalPendentes}\n- Total de músicas diferentes solicitadas: ${totalMusicasDiferentes}\n- 🏆 Música mais pedida: ${musicaMaisPedidaStr}\n\nLista completa de pedidos:\n${listaMusicasTexto}\n\nAté o próximo show!`
             });
         } catch (mailErr) {
             console.error('Erro ao enviar e-mail de resumo do show:', mailErr);
