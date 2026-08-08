@@ -551,6 +551,8 @@ app.delete('/api/fila/resetar', autenticarArtista, async (req, res) => {
         } catch (mailErr) {
             console.error('Erro ao enviar e-mail de resumo do show:', mailErr);
         }
+    }
+
     res.json({ sucesso: true, resetar_local: true, mensagem: 'Fila e subtítulo resetados com sucesso.' });
 });
 
