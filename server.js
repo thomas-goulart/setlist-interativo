@@ -507,7 +507,7 @@ app.delete('/api/fila/resetar', autenticarArtista, async (req, res) => {
     if (req.artista.email) {
         try {
             let listaMusicasTexto = filaAntiga.length > 0 
-                ? filaAntiga.map((p, index) => `${index + 1}. ${p.titulo} - ${p.artista} - [Status: ${p.status === 'tocada' ? 'Tocada 🎸' : 'Pendente'}] (${p.votos || 1} voto(s))`).join('\\n')
+                ? filaAntiga.map((p, index) => `${index + 1}. ${p.titulo} - ${p.artista} - [Status: ${p.status === 'tocada' ? 'Tocada 🎸' : 'Pendente'}] (${p.votos || 1} voto(s))`).join('\n')
                 : 'Nenhum pedido registrado neste show.';
 
             await resend.emails.send({
