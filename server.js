@@ -268,7 +268,7 @@ app.patch('/api/admin/artistas/:id/aprovar', autenticarSuperAdmin, async (req, r
                     from: 'Setlist Interativo <setlistinterativo@setlistinterativo.com.br>',
                     to: artista.email,
                     subject: 'Sua conta foi aprovada! 🎸',
-                    text: `Olá ${artista.nome},\n\nSua conta no Setlist Interativo foi aprovada pelo administrador com sucesso! Você já pode fazer login e gerenciar os seus shows.\n\nAcesse o painel e divirta-se!`
+                    text: `Olá ${artista.nome},\n\nSua conta no Setlist Interativo foi aprovada pelo administrador com sucesso! Você já pode fazer login e gerenciar os seus shows.\n\nAcesse o painel e divirta-se!\n\nAcesse seu painel aqui: https://setlistinterativo.com.br/fila.html`
                 });
             } catch (mailErr) {
                 console.error('Erro ao enviar e-mail de aprovação via Resend:', mailErr);
