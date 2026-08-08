@@ -440,6 +440,19 @@
                 return;
             }
 
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                erroDiv.textContent = 'Por favor, insira um endereço de e-mail válido.';
+                erroDiv.style.display = 'block';
+                return;
+            }
+
+            if (/\s/.test(username)) {
+                erroDiv.textContent = 'O nome de usuário não pode conter espaços.';
+                erroDiv.style.display = 'block';
+                return;
+            }
+
             try {
                 const res = await fetch(`${API}/api/signup`, {
                     method: 'POST',
