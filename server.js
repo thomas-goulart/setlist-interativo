@@ -456,6 +456,10 @@ app.get('/api/fila', autenticarArtista, async (req, res) => {
 app.delete('/api/fila/resetar', autenticarArtista, async (req, res) => {
     const dados = await lerDadosPorArtista(req.artista._id);
     
+    if (dados.config && dados.config.show_liberado === 'sim') {
+        return res.status(403).json({ erro: 'Bloqueie o acesso do público antes de resetar o show.' });
+    }
+    
     const filaAntiga = [...(dados.fila || [])];
     const acessosShow = dados.config.acessos_show || 0;
     const totalPedidosNormais = filaAntiga.filter(p => (p.tipo_pedido || 'normal') === 'normal').reduce((acc, p) => acc + (p.votos || 1), 0);

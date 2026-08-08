@@ -754,6 +754,10 @@
         }
 
         async function resetarSistema() {
+            if (statusShowGlobal === 'sim') {
+                alert('Você precisa bloquear/encerrar o acesso do público antes de resetar o show.');
+                return;
+            }
             if (!confirm('Tem certeza que deseja resetar toda a fila de pedidos e histórico? Esta ação não pode ser desfeita.')) return;
             try {
                 const res = await fetch(`${API}/api/fila/resetar`, { 
