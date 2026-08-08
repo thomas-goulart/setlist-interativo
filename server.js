@@ -586,8 +586,10 @@ app.get('/api/show/:slug/config', async (req, res) => {
     if (!artista) return res.status(404).json({ erro: 'Artista não encontrado.' });
     
     const dados = await lerDadosPorArtista(artista._id);
-    dados.config.acessos_show = (dados.config.acessos_show || 0) + 1;
-    await dados.save();
+    if (dados.config.show_liberado === 'sim') {
+        dados.config.acessos_show = (dados.config.acessos_show || 0) + 1;
+        await dados.save();
+    }
 
     res.json({ nome: artista.nome, ...dados.config.toObject() });
 });
