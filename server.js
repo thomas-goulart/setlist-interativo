@@ -498,11 +498,12 @@ app.delete('/api/fila/resetar', autenticarArtista, async (req, res) => {
     const acessosShow = dados.config.acessos_show || 0;
     const totalPedidosNormais = filaAntiga.filter(p => (p.tipo_pedido || 'normal') === 'normal').reduce((acc, p) => acc + (p.votos || 1), 0);
     const totalPedidosDestaque = filaAntiga.filter(p => (p.tipo_pedido || 'normal') === 'destaque').length;
+    const totalPedidosGeral = totalPedidosNormais + filaAntiga.filter(p => (p.tipo_pedido || 'normal') === 'destaque').reduce((acc, p) => acc + (p.votos || 1), 0);
     const totalMusicasDiferentes = filaAntiga.length;
 
     const tocadasList = filaAntiga.filter(p => p.status === 'tocada');
     const totalTocadas = tocadasList.reduce((acc, p) => acc + (p.votos || 1), 0);
-    const totalPendentes = totalPedidos - totalTocadas;
+    const totalPendentes = totalPedidosGeral - totalTocadas;
 
     const terminoTs = Date.now();
     const inicioTs = dados.config.show_inicio_ts;
@@ -691,6 +692,7 @@ app.patch('/api/show/:slug/fila/:id/voto', async (req, res) => {
     }
 
     pedido.votos = (pedido.votos || 1) + 1;
+    if (req.body.tipo_pedido) pedido.tipo_pedido = req.body.tipo_pedido;
     await dados.save();
     res.json({ sucesso: true, mensagem: 'Pedido destacado com sucesso!', pedido });
 });
