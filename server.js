@@ -33,6 +33,7 @@ const configSchema = new mongoose.Schema({
     subtitulo: { type: String, default: '' },
     event_id: { type: String, default: () => Date.now().toString() },
     acessos_show: { type: Number, default: 0 },
+    visitantes_unicos: { type: [String], default: [] },
     show_inicio_ts: { type: Number, default: null }
 });
 
@@ -97,6 +98,10 @@ async function lerDadosPorArtista(artistaId) {
     }
     if (dados.config.show_inicio_ts === undefined) {
         dados.config.show_inicio_ts = null;
+        await dados.save();
+    }
+    if (!dados.config.visitantes_unicos) {
+        dados.config.visitantes_unicos = [];
         await dados.save();
     }
     return dados;
@@ -526,6 +531,7 @@ app.delete('/api/fila/resetar', autenticarArtista, async (req, res) => {
     dados.config.subtitulo = "";
     dados.config.event_id = Date.now().toString();
     dados.config.acessos_show = 0;
+    dados.config.visitantes_unicos = [];
     dados.config.show_inicio_ts = null;
     await dados.save();
 
@@ -539,7 +545,7 @@ app.delete('/api/fila/resetar', autenticarArtista, async (req, res) => {
                 from: 'Setlist Interativo <setlistinterativo@setlistinterativo.com.br>',
                 to: req.artista.email,
                 subject: 'Relatório Completo do Show Encerrado 🎸',
-                text: `Olá ${req.artista.nome},\n\nO seu show foi encerrado com sucesso! Aqui está o relatório completo de interações:\n\n- Horário de Início: ${horarioInicioStr}\n- Horário de Término: ${horarioTerminoStr}\n- Duração do Show: ${duracaoStr}\n- Total de acessos na página do show: ${acessosShow}\n- Total de músicas pedidas: ${totalPedidos}\n- Músicas tocadas: ${totalTocadas}\n- Músicas restantes/pendentes: ${totalPendentes}\n- Total de músicas diferentes solicitadas: ${totalMusicasDiferentes}\n- 🏆 Música mais pedida: ${musicaMaisPedidaStr}\n\nLista completa de pedidos:\n${listaMusicasTexto}\n\nAté o próximo show!`
+                text: `Olá ${req.artista.nome},\n\nO seu show foi encerrado com sucesso! Aqui está o relatório completo de interações:\n\n- Horário de Início: ${horarioInicioStr}\n- Horário de Término: ${horarioTerminoStr}\n- Duração do Show: ${duracaoStr}\n- Total de acessos únicos na página do show: ${acessosShow}\n- Total de músicas pedidas: ${totalPedidos}\n- Músicas tocadas: ${totalTocadas}\n- Músicas restantes/pendentes: ${totalPendentes}\n- Total de músicas diferentes solicitadas: ${totalMusicasDiferentes}\n- 🏆 Música mais pedida: ${musicaMaisPedidaStr}\n\nLista completa de pedidos:\n${listaMusicasTexto}\n\nAté o próximo show!`
             });
         } catch (mailErr) {
             console.error('Erro ao enviar e-mail de resumo do show:', mailErr);
