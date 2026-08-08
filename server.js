@@ -502,7 +502,7 @@ app.delete('/api/fila/resetar', autenticarArtista, async (req, res) => {
     const totalMusicasDiferentes = filaAntiga.length;
 
     const tocadasList = filaAntiga.filter(p => p.status === 'tocada');
-    const totalTocadas = tocadasList.reduce((acc, p) => acc + (p.votos || 1), 0);
+    const totalTocadas = tocadasList.length;
     const totalPendentes = totalPedidosGeral - totalTocadas;
 
     const terminoTs = Date.now();
